@@ -9,7 +9,6 @@ load_dotenv(dotenv_path=env_path)
 # Initialize Firebase once
 cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-print(f'path = {cred_path}')
 cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 

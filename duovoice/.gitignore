@@ -34,10 +34,13 @@ yarn-error.log*
 .env*
 
 # firebase
-backend/firebase-key.json
+firebase-key.json
 
 # vercel
 .vercel
+
+# python virtual environment 
+backend/venv
 
 # typescript
 *.tsbuildinfo
