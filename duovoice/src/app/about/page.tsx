@@ -6,9 +6,9 @@ export default function AboutPage() {
       <h1 className="text-2xl font-bold mb-4">About Duovoice</h1>
       <p>Duovoice connects mute and hearing users via sign language + video.</p>
       <Link href="/">
-        <a className="mt-6 inline-block text-blue-500 hover:underline">
-          ← Back to Home
-        </a>
+        
+           Back to Home
+      
       </Link>
     </main>
   )
