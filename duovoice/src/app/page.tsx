@@ -1,4 +1,12 @@
 import Link from "next/link";
+import React, { useEffect, useState } from "react";
+import { 
+  useMotionValue,
+  useTransform,
+  useAnimation,
+  motion
+} from "framer-motion"; 
+
 
 export default function Home() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
