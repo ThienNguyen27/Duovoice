@@ -1,89 +1,109 @@
 'use client'
-import { useRef, useEffect, useState } from 'react'
+
+import React, { useEffect, useRef, useState } from 'react'
 import * as tf from '@tensorflow/tfjs'
 import * as handpose from '@tensorflow-models/handpose'
+import Webcam from 'react-webcam'
 import '@tensorflow/tfjs-backend-webgl'
 
+// URL to your TF.js–converted ASL graph model
+const MODEL_URL = '/model/asl_model/model.json'
+
+// Labels must match training order
+const LABELS = [
+  'A','B','C','D','E','F','G','H','I',
+  'K','L','M','N','O','P','Q','R','S',
+  'T','U','V','W','X','Y',
+  'del','space'
+]
+
 export default function Practice() {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [model, setModel] = useState<handpose.HandPose | null>(null)
-  const signs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-  const [currentSign, setCurrentSign] = useState<string>(signs[0])
+  const webcamRef = useRef<Webcam>(null)
+  const [model, setModel] = useState<tf.GraphModel | null>(null)
+  const [detector, setDetector] = useState<handpose.HandPose | null>(null)
+  const [prediction, setPrediction] = useState<string>('Loading...')
+  const [videoLoaded, setVideoLoaded] = useState(false)
+  const [videoError, setVideoError] = useState<string | null>(null)
 
-  // 1. Load model + start webcam
+  // Load handpose detector and TF.js graph model
   useEffect(() => {
-    async function setup() {
-      // load TF.js backend
+    async function loadModels() {
+      await tf.ready()
       await tf.setBackend('webgl')
-      // load handpose (or your custom graph/model)
-      const loaded = await handpose.load()
-      setModel(loaded)
 
-      // start webcam
-      if (videoRef.current) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
+      const [det, m] = await Promise.all([
+        handpose.load(),
+        tf.loadGraphModel(MODEL_URL)
+      ])
+
+      setDetector(det)
+      setModel(m)
+      setPrediction('Models loaded!')
     }
-    setup()
+    loadModels().catch(console.error)
   }, [])
 
-  // 2. Continuous detection loop
+  // Inference loop (~5 FPS)
   useEffect(() => {
-    let animId: number
-    async function detect() {
-      if (model && videoRef.current && canvasRef.current) {
-        const ctx = canvasRef.current.getContext('2d')!
-        canvasRef.current.width = videoRef.current.videoWidth
-        canvasRef.current.height = videoRef.current.videoHeight
+    let intervalId: number
+    if (model && detector && webcamRef.current && videoLoaded) {
+      const run = async () => {
+        const video = webcamRef.current!.video
+        if (!video || video.readyState !== 4) return
 
-        // run handpose
-        const preds = await model.estimateHands(videoRef.current)
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+        const hands = await detector.estimateHands(video, true)
+        if (hands.length === 0) {
+          setPrediction('No hand detected')
+          return
+        }
 
-        // draw keypoints
-        preds.forEach(hand => {
-          hand.landmarks.forEach(([x, y]) => {
-            ctx.beginPath()
-            ctx.arc(x, y, 5, 0, 2 * Math.PI)
-            ctx.fill()
-          })
-        })
+        const landmarks = (hands[0].landmarks as number[][]).flat() as number[]
+        const input = tf.tensor(landmarks, [1, landmarks.length])
+        const output = model.predict({ inputs: input }) as tf.Tensor
+        const scores = Array.from(output.dataSync())
+        const maxIndex = scores.indexOf(Math.max(...scores))
+        setPrediction(LABELS[maxIndex] || 'Unknown')
 
-        // TODO: pass landmarks into your classifier to check against `currentSign`
+        tf.dispose([input, output])
       }
-      animId = requestAnimationFrame(detect)
+      intervalId = window.setInterval(run, 200)
     }
-    detect()
-    return () => cancelAnimationFrame(animId)
-  }, [model, currentSign])
-
-  // pick a new random sign
-  function nextSign() {
-    const idx = Math.floor(Math.random() * signs.length)
-    setCurrentSign(signs[idx])
-  }
+    return () => clearInterval(intervalId)
+  }, [model, detector, videoLoaded])
 
   return (
-    <div className="space-y-4">
-      <div className="text-lg">
-        👉 Please sign: <span className="font-bold">{currentSign}</span>
+    <div className="flex flex-col items-center p-4">
+      <Webcam
+        ref={webcamRef}
+        audio={false}
+        mirrored
+        videoConstraints={{ width: 320, height: 320, facingMode: 'user' }}
+        width={320}
+        height={320}
+        className="rounded-lg shadow-md bg-gray-200"
+        onUserMedia={() => {
+          console.log('Webcam started')
+          setVideoLoaded(true)
+        }}
+        onUserMediaError={(err) => {
+          console.error('Webcam error', err)
+          setVideoError((err as Error).message)
+        }}
+      />
+
+      <div className="mt-2">
+        {videoError ? (
+          <span className="text-red-600">Error: {videoError}</span>
+        ) : videoLoaded ? (
+          <span className="text-green-600">Webcam active</span>
+        ) : (
+          <span className="text-gray-500">Waiting for webcam...</span>
+        )}
       </div>
-      <div className="relative w-full max-w-md mx-auto">
-        <video ref={videoRef} className="w-full rounded border" />
-        <canvas
-          ref={canvasRef}
-          className="absolute top-0 left-0 w-full pointer-events-none"
-        />
+
+      <div className="mt-4 text-2xl font-semibold">
+        Prediction: <span className="text-blue-600">{prediction}</span>
       </div>
-      <button
-        onClick={nextSign}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      >
-        Next Sign
-      </button>
     </div>
   )
 }

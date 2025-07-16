@@ -19,8 +19,13 @@ from collections import deque
 cam_idx = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 0
 
 # --- Load trained model and label encoder ---
+print("Loading Keras Model")
 model = tf.keras.models.load_model("asl_alphabet_mlp.h5")
+print("Model loaded successfully")
+
+print("Loading label encoder")
 with open("label_encoder.pkl", "rb") as f:
+    print(f)
     le = pickle.load(f)
 
 # --- Initialize MediaPipe Hands ---
