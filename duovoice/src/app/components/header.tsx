@@ -62,6 +62,10 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
                 About
               </Link>
             </motion.div>
+             <Link href="/practice" className="text-gray-600 hover:text-gray-900 transition-colors">Practice</Link>
+              <Link href="/chat" className="text-gray-600 hover:text-gray-900 transition-colors">Chat</Link>
+              <Link href="/call" className="text-gray-600 hover:text-gray-900 transition-colors">Call</Link>
+              
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -69,7 +73,9 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
             >
              
             </motion.div>
+            
           </nav>
+          
         </div>
 
         {/* <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
