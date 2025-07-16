@@ -40,7 +40,7 @@ firebase-key.json
 .vercel
 
 # python virtual environment 
-backend/venv
+venv
 
 # typescript
 *.tsbuildinfo
