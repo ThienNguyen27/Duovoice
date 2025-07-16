@@ -1,9 +1,18 @@
 from pydantic import BaseModel
-from typing import Literal
-from datetime import datetime, date
+from typing import Optional, Literal
+from datetime import datetime, date, timezone
+from enum import Enum
 
-class User(BaseModel):
-    id: str
+class UserLogin(BaseModel):
+    name: str
+    password: str
+
+class UserSignUp(BaseModel):
+    name: str
+    password: str
+    is_muted: bool = False
+
+class UserInDB(BaseModel):
     name: str
     password_hash: str
     is_muted: bool
