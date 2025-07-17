@@ -49,4 +49,6 @@ next-env.d.ts
 duovoice\model\asl_alphabet_mlp.h5
 duovoice\model\label_encoder.pkl
 
+duovoice\.env.local
+
 duovoice\lib\.env
