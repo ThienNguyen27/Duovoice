@@ -9,7 +9,8 @@ import {
   motion
 } from "framer-motion"; 
 
-import Header from "@/app/components/Header";
+import Header from "./components/Header";
+
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },

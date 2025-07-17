@@ -1,10 +1,11 @@
 import os
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, initialize_app
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from schemas import UserLogin, UserInDB, UserSignUp
+from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation
 import bcrypt
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
@@ -111,3 +112,41 @@ async def call_websocket(websocket: WebSocket, room_id: str):
                     await peer.send_text(data)
     except WebSocketDisconnect:
         peers[room_id].remove(websocket)
+
+
+
+
+# Add a friend under users/{user_uid}/friends
+@app.post("/users/{user_uid}/friends", status_code=201)
+async def add_friend(user_uid: str, inv: FriendInvitation):
+    # Ensure the path param matches the invitation’s requester
+    if inv.requester_id != user_uid:
+        raise HTTPException(400, detail="Mismatched requester")
+    user_ref = db.collection("users").document(user_uid)
+    if not user_ref.get().exists:
+        raise HTTPException(404, detail="User not found")
+    # Use receiver_id as the friend’s UID (and store that as the name if you like)
+    user_ref.collection("friends").document(inv.receiver_id).set({
+        "name": inv.receiver_id,
+        "since": firestore.SERVER_TIMESTAMP
+    })
+    return {"detail": f"Friend {inv.receiver_id} added."}
+
+
+# List friends under users/{user_uid}/friends
+@app.get("/users/{user_uid}/friends")
+async def list_friends(user_uid: str):
+    user_ref = db.collection("users").document(user_uid)
+    if not user_ref.get().exists:
+        raise HTTPException(404, detail="User not found")
+    docs = user_ref.collection("friends").stream()
+    friends = []
+    for doc in docs:
+        d = doc.to_dict()
+        ts = d.get("since")
+        friends.append({
+            "uid": doc.id,
+            "name": d.get("name"),
+            "since": ts.isoformat() if hasattr(ts, "isoformat") else None
+        })
+    return friends
