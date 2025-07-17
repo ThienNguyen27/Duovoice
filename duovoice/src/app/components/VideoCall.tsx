@@ -1,111 +1,149 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'next/navigation';
 
 type SignalingMessage =
-  | { type: 'offer'; data: RTCSessionDescriptionInit }
-  | { type: 'answer'; data: RTCSessionDescriptionInit }
-  | { type: 'candidate'; data: RTCIceCandidateInit };
+  | { type: 'offer' | 'answer'; data: RTCSessionDescriptionInit; sender: string }
+  | { type: 'candidate'; data: RTCIceCandidateInit; sender: string }
+  | { type: 'join'; sender: string };
 
 interface VideoCallProps {
   roomId: string;
+  userId: string;
 }
 
-const VideoCall: React.FC<VideoCallProps> = ({ roomId }) => {
+const VideoCall: React.FC<VideoCallProps> = ({ roomId, userId }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [isStarted, setIsStarted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:8000/call/${roomId}`);
-    wsRef.current = ws;
-
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
     pcRef.current = pc;
 
-    // Handle remote track
+    const ws = new WebSocket(`ws://localhost:8000/call/${roomId}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'join', sender: userId }));
+      console.log(`User ${userId} joined room ${roomId}`);
+    };
+
     pc.ontrack = (event) => {
-      console.log("Remote track received:", event.streams);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
       }
     };
 
-    // Send ICE candidates to signaling server
     pc.onicecandidate = (event) => {
-      if (event.candidate && wsRef.current) {
-        console.log("Sending ICE candidate:", event.candidate);
-        wsRef.current.send(JSON.stringify({ type: 'candidate', data: event.candidate }));
+      if (event.candidate && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'candidate', data: event.candidate, sender: userId }));
       }
     };
 
-    // Handle signaling messages
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
+        if (pc.signalingState !== "closed") {
+          stream.getTracks().forEach((track) => {
+            pc.addTrack(track, stream);
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to access media devices:", err);
+        alert("Failed to access camera/mic.");
+      });
+
     ws.onmessage = async (event) => {
       const message: SignalingMessage = JSON.parse(event.data);
-      const pc = pcRef.current;
-      if (!pc) return;
+      if (message.sender === userId) return;
+
+      if (!pc || pc.signalingState === "closed") return;
 
       switch (message.type) {
+        case 'join':
+          console.log(`Another user ${message.sender} joined`);
+          break;
+
         case 'offer':
-          console.log("Received offer");
           await pc.setRemoteDescription(new RTCSessionDescription(message.data));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          ws.send(JSON.stringify({ type: 'answer', data: answer }));
+          ws.send(JSON.stringify({ type: 'answer', data: answer, sender: userId }));
           break;
+
         case 'answer':
-          console.log("Received answer");
           await pc.setRemoteDescription(new RTCSessionDescription(message.data));
           break;
+
         case 'candidate':
-          console.log("Received candidate");
           await pc.addIceCandidate(new RTCIceCandidate(message.data));
           break;
       }
     };
 
     return () => {
-      pc.close();
-      ws.close();
+      cleanupConnection();
     };
   }, [roomId]);
 
-  const startCall = async () => {
-    try {
-      console.log("Requesting camera and microphone access...");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+  const cleanupConnection = () => {
+    const pc = pcRef.current;
+    const ws = wsRef.current;
 
-      console.log("Got local stream:", stream);
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      const pc = pcRef.current;
-      const ws = wsRef.current;
-      if (!pc || !ws) return;
-
-      stream.getTracks().forEach((track) => {
-        console.log("Adding track:", track);
-        pc.addTrack(track, stream);
-      });
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log("Sending offer:", offer);
-      ws.send(JSON.stringify({ type: 'offer', data: offer }));
-
-      setIsStarted(true);
-    } catch (err) {
-      console.error("Error accessing media devices:", err);
-      alert("Failed to access camera/microphone. Please allow permissions.");
+    if (pc) {
+      pc.close();
+      pcRef.current = null;
     }
+
+    if (ws) {
+      ws.close();
+      wsRef.current = null;
+    }
+
+    const localStream = localVideoRef.current?.srcObject as MediaStream | null;
+    localStream?.getTracks().forEach((track) => track.stop());
+
+    const remoteStream = remoteVideoRef.current?.srcObject as MediaStream | null;
+    remoteStream?.getTracks().forEach((track) => track.stop());
+
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+
+    setIsStarted(false);
+  };
+
+  const startCall = async () => {
+    const pc = pcRef.current;
+    const ws = wsRef.current;
+    if (!pc || !ws) return;
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    ws.send(JSON.stringify({ type: 'offer', data: offer, sender: userId }));
+    setIsStarted(true);
+  };
+
+  const handleSkip = () => {
+    cleanupConnection();
+    const newRoomId = Math.random().toString(36).substring(2, 10);
+    router.push(`/call/${newRoomId}`);
+  };
+
+  const handleExit = () => {
+    cleanupConnection();
+    router.push('/');
   };
 
   return (
@@ -116,24 +154,40 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomId }) => {
           ref={localVideoRef}
           autoPlay
           muted
+          playsInline
           className="w-64 h-48 border"
           style={{ backgroundColor: 'black' }}
         />
         <video
           ref={remoteVideoRef}
           autoPlay
+          playsInline
           className="w-64 h-48 border"
           style={{ backgroundColor: 'black' }}
         />
       </div>
-      {!isStarted && (
+      <div className="flex gap-2">
+        {!isStarted && (
+          <button
+            onClick={startCall}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Start Call
+          </button>
+        )}
         <button
-          onClick={startCall}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          onClick={handleSkip}
+          className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
         >
-          Start Call
+          Skip
         </button>
-      )}
+        <button
+          onClick={handleExit}
+          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+        >
+          Exit
+        </button>
+      </div>
     </div>
   );
 };
