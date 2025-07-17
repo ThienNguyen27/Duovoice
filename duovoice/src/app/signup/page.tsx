@@ -23,19 +23,32 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/signup", {
+      // 1) Sign up
+      const signupRes = await fetch("http://localhost:8000/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, password, is_muted: isMuted }),
       });
-
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.detail || body || "Signup failed");
+      const signupBody = await signupRes.json();
+      if (!signupRes.ok) {
+        throw new Error(signupBody.detail || signupBody || "Signup failed");
       }
 
-      // successful signup → go to login
-      router.push("/login");
+      // 2) Auto-login
+      const loginRes = await fetch("http://localhost:8000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, password }),
+      });
+      if (!loginRes.ok) {
+        const loginErr = await loginRes.json();
+        throw new Error(loginErr.detail || "Auto-login failed");
+      }
+
+      // 3) Persist session & redirect
+      localStorage.setItem("username", name);
+      router.push("/homepage");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -74,7 +87,9 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Confirm Password</label>
+            <label className="block text-sm font-medium mb-1">
+              Confirm Password
+            </label>
             <input
               type="password"
               required
@@ -92,7 +107,7 @@ export default function SignupPage() {
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="isMuted" className="ml-2 text-sm">
-              I am mute (for pairing in calls)
+              I am mute (for call pairing)
             </label>
           </div>
           <button
@@ -100,15 +115,9 @@ export default function SignupPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "Signing up…" : "Sign Up"}
+            {loading ? "Signing you up…" : "Sign Up"}
           </button>
         </form>
-        <p className="text-center text-sm mt-4">
-          Already have an account?{" "}
-          <a href="/login" className="text-blue-600 hover:underline">
-            Log in
-          </a>
-        </p>
       </div>
     </div>
   );
