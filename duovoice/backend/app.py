@@ -1,13 +1,16 @@
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from schemas import UserLogin, UserInDB, UserSignUp
 import bcrypt
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
 load_dotenv(dotenv_path=env_path)
+
+
 # Initialize Firebase once
 cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
@@ -17,6 +20,14 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 app = FastAPI()
+# Allow frontend to connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_headers=["*"],
+    allow_methods=["*"]
+)
+
 @app.get("/") 
 async def root():
     return {"routes": ["/about", "/login", "/signup"]} # basic backend routes
@@ -82,4 +93,20 @@ async def get_all_users():
         users.append(user)
     
     return users
-    
+
+peers = {}
+@app.websocket("/call/{room_id}")
+async def call_websocket(websocket: WebSocket, room_id: str):
+    await websocket.accept()
+    if room_id not in peers:
+        peers[room_id] = []
+    peers[room_id].append(websocket)
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            for peer in peers[room_id]:
+                if peer != websocket:
+                    await peer.send_text(data)
+    except WebSocketDisconnect:
+        peers[room_id].remove(websocket)
