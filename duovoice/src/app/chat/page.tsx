@@ -2,93 +2,116 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "../../../public/lib/firebase.js";            // adjust path if yours differs
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import ChatSidebar from "../components/ChatSidebar";
+import { Friend } from "../../../public/lib/friends"
 
-export default function SignupPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+interface Message {
+  sender: string;
+  content: string;
+  timestamp: string;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+const templateFriends: Friend[] = [
+  { uid: "alice", name: "Alice", since: new Date().toISOString() },
+  { uid: "bob", name: "Bob", since: new Date().toISOString() },
+  { uid: "charlie", name: "Charlie", since: new Date().toISOString() },
+];
 
-    if (password !== confirm) {
-      setError("Passwords do not match");
-      return;
-    }
+export default function ChatPage() {
+  const [friends] = useState<Friend[]>(templateFriends);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
 
-    setLoading(true);
-    try {
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
-      // create a user doc with an empty friends list
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        friends: [] as string[],
-        createdAt: new Date(),
-      });
-      router.push("/chat");
-    } catch (err: any) {
-      setError(err.message || "Signup failed");
-    } finally {
-      setLoading(false);
-    }
+  const currentUser = localStorage.getItem("username") || "currentUser";
+
+  const handleSelectFriend = (friend: Friend) => {
+    setSelectedFriend(friend);
+    // TODO: Fetch real message history here
+    setMessages([
+      { sender: friend.uid, content: "Hi there!", timestamp: "10:00 AM" },
+      { sender: currentUser, content: "Hello!", timestamp: "10:01 AM" },
+    ]);
+  };
+
+  const handleSendMessage = () => {
+    if (!selectedFriend || newMessage.trim() === "") return;
+    const msg: Message = {
+      sender: currentUser,
+      content: newMessage,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages(prev => [...prev, msg]);
+    setNewMessage("");
+    // TODO: Send message over WebSocket or REST and persist
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-        <h1 className="text-2xl font-semibold mb-4 text-center">Sign Up</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="text-red-600 text-sm bg-red-100 p-2 rounded">
-              {error}
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar: Friend List */}
+      <ChatSidebar
+        username={currentUser}
+        selectedFriendId={selectedFriend?.uid}
+        onSelect={handleSelectFriend}
+      />
+
+      {/* Main: Chat Window */}
+      <main className="flex-1 flex flex-col">
+        {selectedFriend ? (
+          <>
+            {/* Header */}
+            <div className="p-4 border-b bg-white">
+              <h2 className="text-xl font-semibold">{selectedFriend.name}</h2>
             </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring"
-            />
+
+            {/* Messages */}
+            <div className="flex-1 p-4 overflow-y-auto">
+              {messages.map((m, i) => (
+                <div
+                  key={i}
+                  className={`mb-4 flex flex-col ${
+                    m.sender === currentUser ? 'items-end' : 'items-start'
+                  }`}
+                >
+                  <div
+                    className={`inline-block px-4 py-2 rounded-lg text-sm max-w-xs break-words ${
+                      m.sender === currentUser
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+                  <span className="text-xs text-gray-500 mt-1">
+                    {m.timestamp}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div className="p-4 border-t bg-white flex">
+              <input
+                type="text"
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={e => setNewMessage(e.target.value)}
+                className="flex-1 border rounded-full px-4 py-2 focus:outline-none"
+              />
+              <button
+                onClick={handleSendMessage}
+                className="ml-2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700"
+              >
+                Send
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            Select a friend to start chatting
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Confirm Password</label>
-            <input
-              type="password"
-              required
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "Creating account…" : "Sign Up"}
-          </button>
-        </form>
-      </div>
+        )}
+      </main>
     </div>
   );
 }
