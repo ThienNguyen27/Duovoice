@@ -1,4 +1,5 @@
 'use client';
+
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { 
@@ -8,7 +9,7 @@ import {
   motion
 } from "framer-motion"; 
 
-import Header from "@/app/components/header";
+import Header from "@/app/components/Header";
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },

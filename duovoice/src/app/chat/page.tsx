@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "../lib/firebase.ts";            // adjust path if yours differs
+import { auth, db } from "../../../public/lib/firebase.js";            // adjust path if yours differs
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
