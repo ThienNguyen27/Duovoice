@@ -148,7 +148,7 @@ export default function Home() {
                               </div>
                 <h3 className="text-xl font-semibold mb-2">Live Call Translation</h3>
                 <p className="text-gray-600">
-                  Automatically detects signs and translates them into voice (and vice versa), creating a natural conversation experience.
+                  Automatically detects signs and translates them into text (and vice versa), creating a natural conversation experience.
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
