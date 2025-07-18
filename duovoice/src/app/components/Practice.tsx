@@ -177,28 +177,45 @@ export default function Practice() {
     else setInputText(t=>t+prediction);
   };
 
-  // Submit handlers
+  // Submit handlers for each mode
+  const submitPhrase = () => {
+    const clean = inputText.trim().toLowerCase();
+    if (clean === phrase.toLowerCase()) {
+      const pts = phrase.split(' ').length * 10; // e.g., 10 pts per word
+      setPoints(p => p + pts);
+      setXp(x => x + pts * 2);
+      setStreak(s => s + 1);
+      alert(`✅ Correct! +${pts} points`);
+    } else {
+      setStreak(0);
+      alert(`❌ You wrote "${inputText}", target was "${phrase}".`);
+    }
+    fetchPhrase();
+  };
   const submitWord = () => {
     const clean = inputText.trim().toLowerCase();
     if (clean === targetWord.toLowerCase()) {
-      const pts = targetWord.length*10;
-      setPoints(p=>p+pts);
-      setXp(x=>x+pts*2);
-      setStreak(s=>s+1);
-      alert(`✅ Correct! +${pts} pts`);
-    } else { setStreak(0); alert(`❌ Spelled “${inputText}”, target was “${targetWord}”.`); }
+      const pts = targetWord.length * 10;
+      setPoints(p => p + pts);
+      setXp(x => x + pts * 2);
+      setStreak(s => s + 1);
+      alert(`✅ Correct! +${pts} points`);
+    } else {
+      setStreak(0);
+      alert(`❌ You spelled "${inputText}", target was "${targetWord}".`);
+    }
     fetchWord();
   };
   const submitLetter = () => {
     if (prediction === targetLetter) {
       const pts = 20;
-      setPoints(p=>p+pts);
-      setXp(x=>x+pts*2);
-      setStreak(s=>s+1);
-      alert(`✅ Correct! +${pts} pts`);
+      setPoints(p => p + pts);
+      setXp(x => x + pts * 2);
+      setStreak(s => s + 1);
+      alert(`✅ Correct! +${pts} points`);
     } else {
       setStreak(0);
-      alert(`❌ You signed “${prediction}”, target was “${targetLetter}”.`);
+      alert(`❌ You signed "${prediction}", target was "${targetLetter}".`);
     }
     fetchLetter();
   };
