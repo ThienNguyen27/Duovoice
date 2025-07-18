@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -78,11 +78,18 @@ export default function Home() {
   }
 
   return (
-    
-  <div className="min-h-screen bg-[#FDF6E9] overflow-hidden">
+    <div className="relative min-h-screen bg-[#FDF6E9] overflow-hidden">
+      {/* Login Button */}
+      <div className="absolute top-4 right-4 z-20">
+        <Link href="/login">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Log In
+          </button>
+        </Link>
+      </div>
+
       <Header />
       <main>
-        
         <section
           className="relative min-h-screen flex items-center justify-center overflow-hidden"
           onMouseMove={handleMouse}
@@ -94,9 +101,7 @@ export default function Home() {
               rotateY: rotateY,
               perspective: 1000,
             }}
-          >
-
-          </motion.div>
+          />
 
           <motion.div
             className="relative z-10 text-center"
@@ -109,7 +114,7 @@ export default function Home() {
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               Contactless payment using Facial biometric authentication enables secure,<br />
-               biometric authentication by allowing users to authorize transactions simply by scanning their face.
+              biometric authentication by allowing users to authorize transactions simply by scanning their face.
             </p>  
           </motion.div>
         </section>
@@ -126,20 +131,7 @@ export default function Home() {
               whileInView="animate"
               viewport={{ once: true }}
             >
-              <motion.div
-                className="text-center"
-                variants={fadeIn}
-                whileHover={{ y: -10 }}
-              >
-
-                 <div className="flex justify-center items-center ">
-                                {/* <Image
-                                  src="/face-id1.png"
-                                  alt="Face-ID Logo"
-                                  width={60}
-                                  height={60}
-                                /> */}
-                              </div>
+              <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
                 <h3 className="text-xl font-semibold mb-2">
                   Seamless Facial biometric Checkout
                 </h3>
@@ -147,38 +139,13 @@ export default function Home() {
                   Pay instantly using facial recognition (no phones, cards, or cash required.)
                 </p>
               </motion.div>
-              <motion.div
-                className="text-center"
-                variants={fadeIn}
-                whileHover={{ y: -10 }}
-              >
-
-                 <div className="flex justify-center items-center ">
-                                {/* <Image
-                                  src="/grocery.png"
-                                  alt="Grocery Logo"
-                                  width={60}
-                                  height={60}
-                                /> */}
-                              </div>
+              <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
                 <h3 className="text-xl font-semibold mb-2">Smart Grocery Recognition</h3>
                 <p className="text-gray-600">
-                 AI vision auto-detects grocery items instantly
+                  AI vision auto-detects grocery items instantly
                 </p>
               </motion.div>
-              <motion.div
-                className="text-center"
-                variants={fadeIn}
-                whileHover={{ y: -10 }}
-              >
-             <div className="flex justify-center items-center ">
-                                {/* <Image
-                                  src="/insight1.png"
-                                  alt="Grocery Logo"
-                                  width={60}
-                                  height={60}
-                                /> */}
-                              </div>
+              <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
                 <h3 className="text-xl font-semibold mb-2">
                   Intelligent Store Insights
                 </h3>
@@ -186,15 +153,10 @@ export default function Home() {
                   Track inventory, customer behavior, and sales in real time with an AI-powered dashboard.
                 </p>
               </motion.div>
-              
             </motion.div>
-            
           </div>
-          
         </section>
-        
       </main>
-      
       <footer className="border-t border-neutral-200 py-8 relative z-10">
         <div className="container mx-auto px-4">
           <motion.div
@@ -207,11 +169,9 @@ export default function Home() {
             <p className="text-gray-600 text-sm">
               © {new Date().getFullYear()} Nimbus. All rights reserved.
             </p>
-
           </motion.div>
         </div>
       </footer>
-      
     </div>
   );
 }
