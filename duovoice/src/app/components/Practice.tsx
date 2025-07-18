@@ -17,6 +17,16 @@ const LABELS = [
   'del','space'
 ]
 
+// A list of common English words for dynamic suggestions
+const COMMON_WORDS = [
+  'the','to','and','a','in','that','is','was','he','for','it','with','as','his','on','be','at','by','I','this',
+  'had','not','are','but','from','or','have','an','they','which','one','you','were','her','all','she','there',
+  'would','their','we','him','been','has','when','who','will','more','no','if','out','so','said','what','up',
+  'its','about','into','than','them','can','only','other','new','some','could','time','these','two','may','then',
+  'do','first','any','my','now','such','like','our','over','man','me','even','most','made','after','also','did',
+  'many','before','must','through','back','years','where','much','your','way','well','down','should','because'
+]
+
 interface PhraseResponse { phrase: string }
 
 export default function Practice() {
@@ -75,8 +85,8 @@ export default function Practice() {
   const fetchPhrase = async () => {
     try {
       const res = await fetch('/api/phrases/random')
-      const data = (await res.json()) as PhraseResponse
-      setPhrase(data.phrase)
+      const { phrase: newPhrase } = (await res.json()) as PhraseResponse
+      setPhrase(newPhrase)
       setInputText('')
     } catch (err) {
       console.error('Failed to load phrase', err)
@@ -88,32 +98,30 @@ export default function Practice() {
     fetchPhrase()
   }, [])
 
-  // Derived suggestions: full-word suggestions from the phrase
+  // Dynamic word suggestions based on current prefix
   const suggestions = useMemo(() => {
-    if (!phrase) return []
-    const words = phrase.split(' ')
-    const typedWords = inputText.split(' ')
-    const currentIndex = typedWords.length - 1
-    const prefix = typedWords[currentIndex]
-    const suggestionWord = words[currentIndex]
-    if (!suggestionWord) return []
-    // Show suggestion even if prefix is empty
-    if (prefix === '') {
-      return [suggestionWord]
-    }
-    // Only suggest if it matches prefix and isn't already complete
-    if (
-      suggestionWord.toLowerCase().startsWith(prefix.toLowerCase()) &&
-      suggestionWord !== prefix
-    ) {
-      return [suggestionWord]
-    }
-    return []
-  }, [phrase, inputText])
+    const parts = inputText.split(' ')
+    const prefix = parts[parts.length - 1]
+    if (!prefix) return []
+    const lower = prefix.toLowerCase()
+    return COMMON_WORDS.filter(
+      w => w.startsWith(lower) && w.toLowerCase() !== lower
+    ).slice(0, 5)
+  }, [inputText])
 
-  // Keyboard handler for selecting suggestion via number key
+  // Keyboard handlers for space, delete, and selecting suggestions
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        e.preventDefault()
+        setInputText(prev => prev + ' ')
+        return
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault()
+        setInputText(prev => prev.slice(0, -1))
+        return
+      }
       const idx = parseInt(e.key)
       if (!isNaN(idx) && idx >= 1 && idx <= suggestions.length) {
         applySuggestion(suggestions[idx - 1])
@@ -123,7 +131,7 @@ export default function Practice() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [suggestions])
 
-  // Append model-predicted character
+  // Append the model's predicted letter
   const appendPredicted = () => {
     if (!prediction) return
     if (prediction === 'del') {
@@ -135,16 +143,13 @@ export default function Practice() {
     }
   }
 
-  // Manual space and delete
-  const addSpace = () => setInputText(prev => prev + ' ')
-  const deleteChar = () => setInputText(prev => prev.slice(0, -1))
-
-  // Apply a full-word suggestion
+  // Manual apply suggestion: replace current prefix with full word and add a space
   const applySuggestion = (word: string) => {
-    const typedWords = inputText.split(' ')
-    const currentIndex = typedWords.length - 1
-    typedWords[currentIndex] = word
-    setInputText(typedWords.join(' '))
+    const parts = inputText.split(' ')
+    parts[parts.length - 1] = word
+    const prefixText = parts.slice(0, parts.length - 1).join(' ')
+    const newText = prefixText ? `${prefixText} ${word} ` : `${word} `
+    setInputText(newText)
   }
 
   return (
@@ -180,24 +185,24 @@ export default function Practice() {
           Write Letter
         </button>
         <button
-          onClick={addSpace}
+          onClick={() => setInputText(prev => prev + ' ')}
           className='px-4 py-2 bg-indigo-600 text-white rounded'
         >
           Space
         </button>
         <button
-          onClick={deleteChar}
+          onClick={() => setInputText(prev => prev.slice(0, -1))}
           className='px-4 py-2 bg-red-600 text-white rounded'
         >
           Delete
         </button>
       </div>
 
-      {/* Suggestions: full-word autofill */}
+      {/* Suggestions: dynamic word autofill */}
       {suggestions.length > 0 && (
         <div className='w-full max-w-lg'>
-          <div className='text-sm text-gray-500 mb-2'>Suggestion (press 1):</div>
-          <ul className='grid grid-cols-1 gap-2'>
+          <div className='text-sm text-gray-500 mb-2'>Suggestions (press 1-5):</div>
+          <ul className='grid grid-cols-2 gap-2'>
             {suggestions.map((s, i) => (
               <li
                 key={i}

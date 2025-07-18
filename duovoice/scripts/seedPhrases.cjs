@@ -18,7 +18,7 @@ async function seedPhrases() {
 
   for (let i = 1; i <= 1000; i++) {
     const phrase = faker.helpers
-      .arrayElement(templates) + ` (${i})`;
+      .arrayElement(templates) ;
     batch.set(db.collection("phrases").doc(), {
       phrase,
       createdAt: Date.now(),
