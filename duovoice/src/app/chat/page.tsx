@@ -11,14 +11,7 @@ interface Message {
   timestamp: string;
 }
 
-const templateFriends: Friend[] = [
-  { uid: "alice", name: "Alice", since: new Date().toISOString() },
-  { uid: "bob", name: "Bob", since: new Date().toISOString() },
-  { uid: "charlie", name: "Charlie", since: new Date().toISOString() },
-];
-
 export default function ChatPage() {
-  const [friends] = useState<Friend[]>(templateFriends);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchFriends, Friend } from "../../../public/lib/friends";
+import { getFriends, Friend } from "../../../public/lib/api";
 
 interface ChatSidebarProps {
   username: string;
@@ -18,7 +18,7 @@ export default function ChatSidebar({
 
   useEffect(() => {
     if (username) {
-      fetchFriends(username).then(setFriends);
+      getFriends(username).then(setFriends).catch(console.error);
     }
   }, [username]);
 
