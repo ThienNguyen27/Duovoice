@@ -39,10 +39,8 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
                 />
               </div>
               <span className="text-2xl font-bold text-gray-800 relative">
-                Ni
-                <span className="text-[#0072CE]">m</span>
-                <span className="text-[#0072CE]">b</span>
-                us
+                Duo
+                <span className="text-[#0072CE]">Voice</span>
                 <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-[#408830] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
               </span>
             </Link>
@@ -82,9 +80,9 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
             Sign In
           </Button>
         </motion.div> */}
-            <Link href="/signup">
+            {/* <Link href="/signup">
   <span>Sign Up</span>
-</Link>
+</Link> */}
       </div>
 
     </header>

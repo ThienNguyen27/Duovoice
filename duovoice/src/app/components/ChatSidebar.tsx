@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { getFriends, Friend } from "../../../public/lib/api";
 
+import React from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import Image from "next/image";
+
 interface ChatSidebarProps {
   username: string;
   onSelect: (friend: Friend) => void;
@@ -23,8 +28,32 @@ export default function ChatSidebar({
   }, [username]);
 
   return (
-    <aside className="w-1/4 border-r bg-white">
-      <h2 className="p-4 text-xl font-semibold">Friends</h2>
+    <aside className="w-1/4 border-r relative min-h-screen bg-[#E6F0FA] overflow-hidden">
+<h2 className="p-4 text-xl font-semibold flex items-center">
+  <span>Friends</span>
+
+  <motion.div
+    initial={{ opacity: 0, x: 10 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ duration: 0.5 }}
+    className="ml-auto"
+  >
+    <Link href="/" className="flex items-center">
+      <div className="w-20 h-20 relative"> {/* fixed logo box */}
+        <Image
+          src="/DuoVoice_Logo_DeafBlue_Transparent.png"
+          alt="DuoVoice Logo"
+          fill
+          className="object-contain"
+          priority
+        />
+      </div>
+    </Link>
+  </motion.div>
+</h2>
+
+         
+      
       <ul>
         {friends.map((f) => (
           <li key={f.uid}>

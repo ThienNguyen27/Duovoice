@@ -10,7 +10,7 @@ import {
   motion
 } from "framer-motion";
 
-import Header from "./components/Header";
+import Header from "@/app/components/header";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -77,9 +77,9 @@ export default function Home() {
       {/* Login Button */}
       <div className="absolute top-4 right-4 z-20">
         <Link href="/login">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+
             Log In
-          </button>
+
         </Link>
       </div>
 
