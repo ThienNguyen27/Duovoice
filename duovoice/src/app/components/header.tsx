@@ -46,29 +46,7 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
             </Link>
           </motion.div>
 
-          <nav className="hidden md:flex space-x-6">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <Link
-                href="/about"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                About
-              </Link>
-            </motion.div>
-      
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-             
-            </motion.div>
-            
-          </nav>
+
           
         </div>
 

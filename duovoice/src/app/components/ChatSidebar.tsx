@@ -34,7 +34,7 @@ export default function ChatSidebar({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Link href="/" className="flex items-center">
+          <Link href="/homepage" className="flex items-center">
             <div className="w-20 h-20 relative">
               <Image
                 src="/DuoVoice_Logo_DeafBlue_Transparent.png"
