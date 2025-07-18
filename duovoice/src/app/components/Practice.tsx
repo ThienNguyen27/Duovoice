@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import * as tf from '@tensorflow/tfjs'
 import * as handpose from '@tensorflow-models/handpose'
 import Webcam from 'react-webcam'
@@ -18,7 +18,6 @@ const LABELS = [
 ]
 
 interface PhraseResponse { phrase: string }
-interface SuggestResponse { suggestions: string[] }
 
 export default function Practice() {
   const webcamRef = useRef<Webcam>(null)
@@ -30,7 +29,6 @@ export default function Practice() {
 
   const [phrase, setPhrase] = useState<string>('')
   const [inputText, setInputText] = useState<string>('')
-  const [suggestions, setSuggestions] = useState<string[]>([])
 
   // Load models
   useEffect(() => {
@@ -80,7 +78,6 @@ export default function Practice() {
       const data = (await res.json()) as PhraseResponse
       setPhrase(data.phrase)
       setInputText('')
-      setSuggestions([])
     } catch (err) {
       console.error('Failed to load phrase', err)
     }
@@ -91,49 +88,42 @@ export default function Practice() {
     fetchPhrase()
   }, [])
 
-  // Fetch suggestions on input change
-  useEffect(() => {
-    const loadSuggestions = async () => {
-      if (!inputText) {
-        setSuggestions([])
-        return
-      }
-      try {
-        const res = await fetch(`/api/phrases/suggest?prefix=${encodeURIComponent(inputText)}`)
-        const data = (await res.json()) as SuggestResponse
-        setSuggestions(data.suggestions)
-      } catch (err) {
-        console.error('Failed to load suggestions', err)
-      }
+  // Derived suggestions: full-word suggestions from the phrase
+  const suggestions = useMemo(() => {
+    if (!phrase) return []
+    const words = phrase.split(' ')
+    const typedWords = inputText.split(' ')
+    const currentIndex = typedWords.length - 1
+    const prefix = typedWords[currentIndex]
+    const suggestionWord = words[currentIndex]
+    if (!suggestionWord) return []
+    // Show suggestion even if prefix is empty
+    if (prefix === '') {
+      return [suggestionWord]
     }
-    const timer = setTimeout(loadSuggestions, 300)
-    return () => clearTimeout(timer)
-  }, [inputText])
+    // Only suggest if it matches prefix and isn't already complete
+    if (
+      suggestionWord.toLowerCase().startsWith(prefix.toLowerCase()) &&
+      suggestionWord !== prefix
+    ) {
+      return [suggestionWord]
+    }
+    return []
+  }, [phrase, inputText])
 
-  // Keyboard handlers: space, backspace, and suggestions
+  // Keyboard handler for selecting suggestion via number key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
-        e.preventDefault()
-        setInputText(prev => prev + ' ')
-        return
-      }
-      if (e.key === 'Backspace') {
-        e.preventDefault()
-        setInputText(prev => prev.slice(0, -1))
-        return
-      }
       const idx = parseInt(e.key)
-      if (!isNaN(idx) && idx >= 1 && idx <= 5) {
-        const sel = suggestions[idx - 1]
-        if (sel) setInputText(sel)
+      if (!isNaN(idx) && idx >= 1 && idx <= suggestions.length) {
+        applySuggestion(suggestions[idx - 1])
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [suggestions])
 
-  // Append the model's predicted letter
+  // Append model-predicted character
   const appendPredicted = () => {
     if (!prediction) return
     if (prediction === 'del') {
@@ -143,6 +133,18 @@ export default function Practice() {
     } else {
       setInputText(prev => prev + prediction)
     }
+  }
+
+  // Manual space and delete
+  const addSpace = () => setInputText(prev => prev + ' ')
+  const deleteChar = () => setInputText(prev => prev.slice(0, -1))
+
+  // Apply a full-word suggestion
+  const applySuggestion = (word: string) => {
+    const typedWords = inputText.split(' ')
+    const currentIndex = typedWords.length - 1
+    typedWords[currentIndex] = word
+    setInputText(typedWords.join(' '))
   }
 
   return (
@@ -177,19 +179,30 @@ export default function Practice() {
         >
           Write Letter
         </button>
-        <span className='text-sm text-gray-600'>or press <strong>Space</strong></span>
+        <button
+          onClick={addSpace}
+          className='px-4 py-2 bg-indigo-600 text-white rounded'
+        >
+          Space
+        </button>
+        <button
+          onClick={deleteChar}
+          className='px-4 py-2 bg-red-600 text-white rounded'
+        >
+          Delete
+        </button>
       </div>
 
-      {/* Suggestions */}
+      {/* Suggestions: full-word autofill */}
       {suggestions.length > 0 && (
         <div className='w-full max-w-lg'>
-          <div className='text-sm text-gray-500 mb-2'>Suggestions (press 1-5):</div>
-          <ul className='grid grid-cols-2 gap-2'>
+          <div className='text-sm text-gray-500 mb-2'>Suggestion (press 1):</div>
+          <ul className='grid grid-cols-1 gap-2'>
             {suggestions.map((s, i) => (
               <li
                 key={i}
                 className='p-2 border rounded hover:bg-gray-100 cursor-pointer'
-                onClick={() => setInputText(s)}
+                onClick={() => applySuggestion(s)}
               >
                 <span className='font-bold mr-1'>{i + 1}.</span> {s}
               </li>
