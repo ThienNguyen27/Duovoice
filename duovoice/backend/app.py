@@ -2,15 +2,28 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation
 import bcrypt
+import redis
+import uuid
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
 load_dotenv(dotenv_path=env_path)
+redis_host = os.getenv("REDIS_HOST")
+redis_port = os.getenv("REDIS_PORT")
+redis_username = os.getenv("REDIS_USERNAME")
+redis_password = os.getenv("REDIS_PASSWORD")
 
+r = redis.Redis(
+    host=redis_host,
+    port=redis_port,
+    decode_responses=True,
+    username=redis_username,
+    password=redis_password,
+)
 
 # Initialize Firebase once
 cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -29,6 +42,13 @@ app.add_middleware(
     allow_headers=["*"],
     allow_methods=["*"]
 )
+
+@app.on_event("startup")
+def clear_queues():
+    # remove leftover entries from previous runs
+    r.delete("normal_queue", "muted_queue")
+    # we'll also use a hash to store matches
+    r.delete("matches")
 
 @app.get("/") 
 async def root():
@@ -150,3 +170,46 @@ async def list_friends(user_uid: str):
             "since": ts.isoformat() if hasattr(ts, "isoformat") else None
         })
     return friends
+
+# matching normal with muted person currently take in a json
+@app.post("/match")
+async def match_user(user_id: str = Body(...)):
+    # 1) Clean up any stale entries for this user
+    r.lrem("normal_queue", 0, user_id)
+    r.lrem("muted_queue", 0, user_id)
+
+    # 2) Fetch user metadata
+    doc = db.collection("users").document(user_id).get()
+    if not doc.exists:
+        raise HTTPException(404, "User not found")
+    is_muted = doc.to_dict().get("is_muted", False)
+
+    # 3) Determine which list to push vs pop
+    my_queue = "muted_queue" if is_muted else "normal_queue"
+    other_queue = "normal_queue" if is_muted else "muted_queue"
+
+    # 4) Try to atomically pop a peer
+    peer_id = r.lpop(other_queue)
+    if peer_id:
+        room_id = uuid.uuid4().hex
+        # store both room and peer for each user
+        r.hset("matches", user_id, room_id)
+        r.hset("matches", peer_id, room_id)
+        r.hset("peers", user_id, peer_id)
+        r.hset("peers", peer_id, user_id)
+        return {"status": "matched", "room_id": room_id, "peer_id": peer_id}
+
+    # 5) No peer yet, enqueue this user
+    r.rpush(my_queue, user_id)
+    return {"status": "waiting"}
+
+@app.get("/match/status/{user_id}")
+async def match_status(user_id: str):
+    room_id = r.hget("matches", user_id)
+    if room_id:
+        peer_id = r.hget("peers", user_id)
+        # clean up
+        r.hdel("matches", user_id)
+        r.hdel("peers", user_id)
+        return {"status": "matched", "room_id": room_id, "peer_id": peer_id}
+    return {"status": "waiting"}

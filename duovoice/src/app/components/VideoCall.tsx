@@ -1,195 +1,137 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-type SignalingMessage =
+type Signaling =
   | { type: 'offer' | 'answer'; data: RTCSessionDescriptionInit; sender: string }
-  | { type: 'candidate'; data: RTCIceCandidateInit; sender: string }
-  | { type: 'join'; sender: string };
+  | { type: 'candidate'; data: RTCIceCandidateInit; sender: string };
 
 interface VideoCallProps {
   roomId: string;
   userId: string;
+  peerId: string;
 }
 
-const VideoCall: React.FC<VideoCallProps> = ({ roomId, userId }) => {
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+export default function VideoCall({
+  roomId,
+  userId,
+  peerId,
+}: VideoCallProps) {
+  const localRef = useRef<HTMLVideoElement>(null);
+  const remoteRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [isStarted, setIsStarted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    let isMounted = true;
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
     pcRef.current = pc;
 
+    pc.onnegotiationneeded = async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        wsRef.current?.send(
+          JSON.stringify({ type: 'offer', data: pc.localDescription, sender: userId })
+        );
+      } catch (err) {
+        console.error('negotiationneeded failed:', err);
+      }
+    };
+
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({ type: 'candidate', data: candidate, sender: userId })
+        );
+      }
+    };
+
+    pc.ontrack = (evt) => {
+      if (remoteRef.current) {
+        remoteRef.current.srcObject = evt.streams[0];
+      }
+    };
+
     const ws = new WebSocket(`ws://localhost:8000/call/${roomId}`);
     wsRef.current = ws;
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'join', sender: userId }));
-      console.log(`User ${userId} joined room ${roomId}`);
-    };
-
-    pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
-    };
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'candidate', data: event.candidate, sender: userId }));
-      }
-    };
-
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-
-        if (pc.signalingState !== "closed") {
-          stream.getTracks().forEach((track) => {
-            pc.addTrack(track, stream);
-          });
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to access media devices:", err);
-        alert("Failed to access camera/mic.");
-      });
-
-    ws.onmessage = async (event) => {
-      const message: SignalingMessage = JSON.parse(event.data);
-      if (message.sender === userId) return;
-
-      if (!pc || pc.signalingState === "closed") return;
-
-      switch (message.type) {
-        case 'join':
-          console.log(`Another user ${message.sender} joined`);
-          break;
-
+    ws.onmessage = async ({ data }) => {
+      const msg: Signaling = JSON.parse(data);
+      if (msg.sender === userId) return;
+      const cur = pcRef.current!;
+      switch (msg.type) {
         case 'offer':
-          await pc.setRemoteDescription(new RTCSessionDescription(message.data));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
+          await cur.setRemoteDescription(new RTCSessionDescription(msg.data));
+          const answer = await cur.createAnswer();
+          await cur.setLocalDescription(answer);
           ws.send(JSON.stringify({ type: 'answer', data: answer, sender: userId }));
           break;
-
         case 'answer':
-          await pc.setRemoteDescription(new RTCSessionDescription(message.data));
+          await cur.setRemoteDescription(new RTCSessionDescription(msg.data));
           break;
-
         case 'candidate':
-          await pc.addIceCandidate(new RTCIceCandidate(message.data));
+          await cur.addIceCandidate(new RTCIceCandidate(msg.data));
           break;
       }
     };
 
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        if (!isMounted) return;
+        if (localRef.current) localRef.current.srcObject = stream;
+        stream.getTracks().forEach((track) => {
+          // only add if connection still open
+          if (pc.signalingState !== 'closed') {
+            pc.addTrack(track, stream);
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('Could not get local media:', err);
+        alert('Please allow camera & microphone.');
+      });
+
     return () => {
-      cleanupConnection();
-    };
-  }, [roomId]);
-
-  const cleanupConnection = () => {
-    const pc = pcRef.current;
-    const ws = wsRef.current;
-
-    if (pc) {
+      isMounted = false;
+      ws.close();
       pc.close();
       pcRef.current = null;
-    }
-
-    if (ws) {
-      ws.close();
       wsRef.current = null;
-    }
-
-    const localStream = localVideoRef.current?.srcObject as MediaStream | null;
-    localStream?.getTracks().forEach((track) => track.stop());
-
-    const remoteStream = remoteVideoRef.current?.srcObject as MediaStream | null;
-    remoteStream?.getTracks().forEach((track) => track.stop());
-
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-
-    setIsStarted(false);
-  };
-
-  const startCall = async () => {
-    const pc = pcRef.current;
-    const ws = wsRef.current;
-    if (!pc || !ws) return;
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    ws.send(JSON.stringify({ type: 'offer', data: offer, sender: userId }));
-    setIsStarted(true);
-  };
-
-  const handleSkip = () => {
-    cleanupConnection();
-    const newRoomId = Math.random().toString(36).substring(2, 10);
-    router.push(`/call/${newRoomId}`);
-  };
-
-  const handleExit = () => {
-    cleanupConnection();
-    router.push('/');
-  };
+    };
+  }, [roomId, userId]);
 
   return (
     <div className="flex flex-col items-center space-y-4">
-      <h2 className="text-xl font-bold">WebRTC Video Call</h2>
+      <h2 className="text-xl font-bold">
+        In call with <span className="underline">{peerId}</span>
+      </h2>
       <div className="flex gap-4">
         <video
-          ref={localVideoRef}
+          ref={localRef}
           autoPlay
           muted
           playsInline
-          className="w-64 h-48 border"
-          style={{ backgroundColor: 'black' }}
+          className="w-64 h-48 bg-black"
         />
         <video
-          ref={remoteVideoRef}
+          ref={remoteRef}
           autoPlay
           playsInline
-          className="w-64 h-48 border"
-          style={{ backgroundColor: 'black' }}
+          className="w-64 h-48 bg-black"
         />
       </div>
-      <div className="flex gap-2">
-        {!isStarted && (
-          <button
-            onClick={startCall}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Start Call
-          </button>
-        )}
-        <button
-          onClick={handleSkip}
-          className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-        >
-          Skip
-        </button>
-        <button
-          onClick={handleExit}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Exit
-        </button>
-      </div>
+      <button
+        onClick={() => router.push('/homepage')}
+        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+      >
+        Exit
+      </button>
     </div>
   );
-};
-
-export default VideoCall;
+}
