@@ -1,0 +1,41 @@
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env.local") });
+
+const admin = require("firebase-admin");
+const { faker } = require("@faker-js/faker");
+
+// Admin SDK will read GOOGLE_APPLICATION_CREDENTIALS from .env.local
+admin.initializeApp();
+
+const db = admin.firestore();
+
+async function seedPhrases() {
+  console.log("Seeding 200 phrases into Firestore…");
+  let batch = db.batch();
+  const templates = [
+    "How is your day going", "What did you do last weekend", "Can you tell me more about that", "Have you seen any good movies lately", "What is your favorite food", "Where did you grow up", "Do you like to travel", "What kind of music do you listen to", "How do you usually spend your mornings", "Do you have any pets", "What are you up to today", "Anything exciting happening", "How is everything with you", "What is new", "How is work/school", "Did you have a good day", "What is on your mind", "How is the weather where you are", "What did you have for breakfast", "Sleeping well", "Any plans for the evening", "Looking forward to the weekend", "How was your commute", "What is for dinner", "Read any good books recently", "Heard any interesting news", "What is your go-to coffee order", "How do you relax after a long day", "What is your dream vacation", "Do you prefer coffee or tea", "What is your favorite season", "Any hobbies you are passionate about", "What is a skill you would like to learn", "What is your favorite type of cuisine", "Do you enjoy cooking", "What is a TV show you are currently watching", "What is your favorite holiday", "Are you a morning person or a night owl", "What is your favorite animal", "Do you like to exercise", "What is your favorite color", "Any fun facts about yourself", "What is your biggest pet peeve", "What is something that makes you happy", "What is your favorite sport to watch", "Do you play any sports", "What is your favorite board game", "What is your favorite card game", "Do you like puzzles", "What is your favorite kind of dessert", "Sweet or savory", "What is your favorite ice cream flavor", "What is your favorite drink", "Do you have a favorite restaurant", "What is your favorite type of flower", "Do you have a favorite tree", "What is your favorite natural phenomenon", "Do you believe in aliens", "What is your favorite mythical creature", "If you could have any superpower, what would it be", "If you could meet anyone, living or dead, who would it be", "If you could travel anywhere in time, when would you go", "What is one thing on your bucket list", "What is a cause you care about", "Do you volunteer", "What is a charity you support", "What is your favorite quote", "Do you have a favorite saying", "What is a lesson you have learned recently", "What is a piece of advice you would give your younger self", "What is something you are grateful for", "What is a goal you are working towards", "What is a challenge you have overcome", "What is a skill you are proud of", "What is something that inspires you", "What is a place you would love to visit", "What is your favorite thing about where you live", "Do you like to garden", "What is your favorite plant", "Do you have a green thumb", "What is your favorite outdoor activity", "Do you like hiking", "Do you like camping", "Do you like the beach", "Do you like the mountains", "What is your favorite type of weather", "Do you prefer hot or cold", "What is your favorite sound", "What is your favorite smell", "What is your favorite texture", "What is your favorite taste", "What is your favorite feeling", "What is your favorite memory", "What is a funny story you like to tell", "What is a memorable dream you have had", "Do you believe in destiny", "Do you believe in luck", "What is your biggest fear", "What is your biggest hope", "What is something that makes you laugh", "What is something that makes you cry", "What is something that makes you angry", "What is something that makes you proud", "What is something that makes you happy", "What is something that makes you sad", "What is something that makes you anxious", "What is something that makes you calm", "What is something that makes you excited", "What is something that makes you bored", "What is something that makes you curious", "What is something that makes you thoughtful", "What is something that makes you reflective", "What is something that makes you nostalgic", "What is something that makes you optimistic", "What is something that makes you pessimistic", "What is something that makes you realistic", "What is something that makes you idealistic", "What is something that makes you practical", "What is something that makes you creative", "What is something that makes you logical", "What is something that makes you intuitive", "What is something that makes you empathetic", "What is something that makes you compassionate", "What is something that makes you understanding", "What is something that makes you tolerant", "What is something that makes you open-minded", "What is something that makes you adventurous", "What is something that makes you cautious", "What is something that makes you bold", "What is something that makes you shy", "What is something that makes you outgoing", "What is something that makes you introverted", "What is something that makes you extroverted", "What is something that makes you patient", "What is something that makes you impatient", "What is something that makes you disciplined", "What is something that makes you spontaneous", "What is something that makes you organized", "What is something that makes you messy", "What is something that makes you neat", "What is something that makes you clean", "What is something that makes you dirty", "What is something that makes you polite", "What is something that makes you rude", "What is something that makes you kind", "What is something that makes you mean", "What is something that makes you honest", "What is something that makes you dishonest", "What is something that makes you trustworthy", "What is something that makes you unreliable", "What is something that makes you loyal", "What is something that makes you disloyal", "What is something that makes you supportive", "What is something that makes you critical", "What is something that makes you encouraging", "What is something that makes you discouraging", "What is something that makes you positive", "What is something that makes you negative", "What is something that makes you optimistic", "What is something that makes you pessimistic", "What is something that makes you hopeful", "What is something that makes you hopeless", "What is something that makes you confident", "What is something that makes you insecure", "What is something that makes you brave", "What is something that makes you fearful", "What is something that makes you strong", "What is something that makes you weak", "What is something that makes you resilient", "What is something that makes you fragile", "What is something that makes you flexible", "What is something that makes you rigid", "What is something that makes you open", "What is something that makes you closed", "What is something that makes you forgiving", "What is something that makes you resentful", "What is something that makes you accepting", "What is something that makes you judgmental", "What is something that makes you free", "What is something that makes you constrained", "What is something that makes you independent", "What is something that makes you dependent", "What is something that makes you adventurous", "What is something that makes you settled", "What is something that makes you curious", "What is something that makes you complacent", "What is something that makes you innovative", "What is something that makes you traditional"
+  ];
+
+  for (let i = 1; i <= 1000; i++) {
+    const phrase = faker.helpers
+      .arrayElement(templates) + ` (${i})`;
+    batch.set(db.collection("phrases").doc(), {
+      phrase,
+      createdAt: Date.now(),
+    });
+
+    if (i % 500 === 0) {
+      await batch.commit();
+      batch = db.batch();
+    }
+  }
+
+  await batch.commit();
+  console.log("✅ 200 phrases seeded!");
+  process.exit(0);
+}
+
+seedPhrases().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
