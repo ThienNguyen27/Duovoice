@@ -126,7 +126,7 @@ export default function Home() {
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
                  <div className="flex justify-center items-center ">
                                 <Image
-                                  src="/practice_icon.jpg"
+                                  src="/practice_icon_transparent.png"
                                   alt="pratice icon"
                                   width={60}
                                   height={60}
