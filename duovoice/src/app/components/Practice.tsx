@@ -91,7 +91,7 @@ export default function Practice() {
     fetchPhrase()
   }, [])
 
-  // Fetch suggestions
+  // Fetch suggestions on input change
   useEffect(() => {
     const loadSuggestions = async () => {
       if (!inputText) {
@@ -106,16 +106,22 @@ export default function Practice() {
         console.error('Failed to load suggestions', err)
       }
     }
-    const id = setTimeout(loadSuggestions, 300)
-    return () => clearTimeout(id)
+    const timer = setTimeout(loadSuggestions, 300)
+    return () => clearTimeout(timer)
   }, [inputText])
 
-  // Keyboard handlers
+  // Keyboard handlers: space, backspace, and suggestions
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === ' ') {
         e.preventDefault()
-        appendPredicted()
+        setInputText(prev => prev + ' ')
+        return
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault()
+        setInputText(prev => prev.slice(0, -1))
+        return
       }
       const idx = parseInt(e.key)
       if (!isNaN(idx) && idx >= 1 && idx <= 5) {
@@ -125,9 +131,9 @@ export default function Practice() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [prediction, suggestions, inputText])
+  }, [suggestions])
 
-  // Append current prediction
+  // Append the model's predicted letter
   const appendPredicted = () => {
     if (!prediction) return
     if (prediction === 'del') {
@@ -141,34 +147,50 @@ export default function Practice() {
 
   return (
     <div className='flex flex-col items-center p-4 space-y-4'>
+      {/* Prompt and refresh */}
       <div className='w-full max-w-lg flex items-center justify-between'>
         <h2 className='text-xl font-medium'>Prompt:</h2>
-        <button onClick={fetchPhrase} className='px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700'>
+        <button
+          onClick={fetchPhrase}
+          className='px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700'
+        >
           Next Phrase
         </button>
       </div>
-      <p className='w-full max-w-lg mt-1 p-3 border rounded whitespace-pre-wrap bg-gray-50'>
+      <p className='w-full max-w-lg mt-1 p-3 border rounded bg-gray-50 whitespace-pre-wrap'>
         {phrase || 'Loading...'}
       </p>
 
+      {/* User input display */}
       <div className='w-full max-w-lg'>
         <h2 className='text-xl font-medium'>Your Input:</h2>
-        <p className='mt-1 p-3 border rounded whitespace-pre-wrap bg-gray-50'>{inputText}</p>
+        <p className='mt-1 p-3 border rounded bg-gray-50 whitespace-pre-wrap'>
+          {inputText}
+        </p>
       </div>
 
+      {/* Controls */}
       <div className='flex items-center space-x-2'>
-        <button onClick={appendPredicted} className='px-4 py-2 bg-blue-600 text-white rounded'>
+        <button
+          onClick={appendPredicted}
+          className='px-4 py-2 bg-blue-600 text-white rounded'
+        >
           Write Letter
         </button>
         <span className='text-sm text-gray-600'>or press <strong>Space</strong></span>
       </div>
 
+      {/* Suggestions */}
       {suggestions.length > 0 && (
         <div className='w-full max-w-lg'>
           <div className='text-sm text-gray-500 mb-2'>Suggestions (press 1-5):</div>
           <ul className='grid grid-cols-2 gap-2'>
             {suggestions.map((s, i) => (
-              <li key={i} className='p-2 border rounded hover:bg-gray-100 cursor-pointer' onClick={() => setInputText(s)}>
+              <li
+                key={i}
+                className='p-2 border rounded hover:bg-gray-100 cursor-pointer'
+                onClick={() => setInputText(s)}
+              >
                 <span className='font-bold mr-1'>{i + 1}.</span> {s}
               </li>
             ))}
@@ -176,6 +198,7 @@ export default function Practice() {
         </div>
       )}
 
+      {/* Webcam & Prediction */}
       <Webcam
         ref={webcamRef}
         audio={false}
@@ -187,7 +210,6 @@ export default function Practice() {
         onUserMedia={() => setVideoLoaded(true)}
         onUserMediaError={err => setVideoError((err as Error).message)}
       />
-
       <div>
         {videoError ? (
           <span className='text-red-600'>Error: {videoError}</span>
