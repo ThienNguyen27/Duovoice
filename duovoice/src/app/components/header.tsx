@@ -29,9 +29,9 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
             transition={{ duration: 0.5 }}
           >
             <Link href="/" className="flex items-center group">
-              <div className="relative w-12 h-12 mr-2">
+              <div className="relative w-20 h-25 mr-2">
                 <Image
-                  src="/Nimbuslogo.png"
+                  src="/DuoVoice_Logo_DeafBlue_Transparent.png"
                   alt="Traider Logo"
                   fill
                   className="object-contain"
@@ -40,8 +40,8 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
               </div>
               <span className="text-2xl font-bold text-gray-800 relative">
                 Ni
-                <span className="text-[#0288D1]">m</span>
-                <span className="text-[#0288D1]">b</span>
+                <span className="text-[#0072CE]">m</span>
+                <span className="text-[#0072CE]">b</span>
                 us
                 <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-[#408830] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
               </span>

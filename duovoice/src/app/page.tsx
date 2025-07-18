@@ -1,4 +1,5 @@
-"use client";
+'use client';
+import Image from "next/image";
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -78,16 +79,8 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#FDF6E9] overflow-hidden">
-      {/* Login Button */}
-      <div className="absolute top-4 right-4 z-20">
-        <Link href="/login">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Log In
-          </button>
-        </Link>
-      </div>
-
+    
+  <div className="min-h-screen bg-[#E6F0FA] overflow-hidden">
       <Header />
       <main>
         <section
@@ -110,11 +103,10 @@ export default function Home() {
             transition={{ duration: 0.7, delay: 0.3 }}
           >
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              No cash. No touch. No delay.
+              Speak Through Sign, Connect Through Heart
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Contactless payment using Facial biometric authentication enables secure,<br />
-              biometric authentication by allowing users to authorize transactions simply by scanning their face.
+              Duovoice connects non-speaking and speaking users through live video and guided sign-language,<br/> making communication effortless and inclusive.
             </p>  
           </motion.div>
         </section>
@@ -131,7 +123,20 @@ export default function Home() {
               whileInView="animate"
               viewport={{ once: true }}
             >
-              <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
+              <motion.div
+                className="text-center"
+                variants={fadeIn}
+                whileHover={{ y: -10 }}
+              >
+
+                 <div className="flex justify-center items-center ">
+                                {/* <Image
+                                  src="/Duovoice\duovoice\public\DuoVoice_Logo_DeafBlue_Transparent.png"
+                                  alt="Face-ID Logo"
+                                  width={60}
+                                  height={60}
+                                /> */}
+                              </div>
                 <h3 className="text-xl font-semibold mb-2">
                   Seamless Facial biometric Checkout
                 </h3>
