@@ -1,20 +1,29 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import VideoCall from '@/app/components/VideoCall';
-import { useParams } from 'next/navigation';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function CallPage() {
-  const [mounted, setMounted] = useState(false);
-  const { roomId } = useParams();
-  const [userId] = useState(() => uuidv4()); // generated once per mount
+  const { roomId: rawRoom } = useParams();
+  const roomId = Array.isArray(rawRoom) ? rawRoom[0] : rawRoom || '';
+  const search = useSearchParams();
+  const userId = search.get('userId') ?? '';
+  const peerId = search.get('peerId') ?? '';
+  // const initiator = search.get('initiator') === 'true';
 
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    setMounted(true);
+    setReady(true);
   }, []);
 
-  if (!mounted || typeof roomId !== 'string') return null;
+  if (!ready || !roomId || !userId || !peerId) return null;
 
-  return <VideoCall roomId={roomId} userId={userId} />;
+  return (
+    <VideoCall
+      roomId={roomId}
+      userId={userId}
+      peerId={peerId}
+    />
+  );
 }

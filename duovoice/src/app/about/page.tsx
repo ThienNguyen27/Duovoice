@@ -42,13 +42,12 @@ export default function About() {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-5xl font-bold text-gray-900 mb-4 text-center">
-            About Ni
-            <span className="text-[#0288D1]">m</span>
-            <span className="text-[#0288D1]">b</span>
-            us
+            About Duo
+            <span className="text-[#0072CE]">Voice</span>
+
           </h1>
           <p className="text-xl text-gray-600 mb-12 text-center max-w-3xl mx-auto">
-            Redefining payments with facial recognition
+            Silent calls. Powerful connections.
           </p>
         </motion.div>
 
@@ -63,8 +62,8 @@ export default function About() {
               Our Mission
             </h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              At Nimbus, our mission is to revolutionize payments by making them faster, safer, and truly contactless.
-Using facial biometric authentication, we enable users to pay securely without touching a card, phone, or keypad.
+             At DuoVoice, our mission is to bridge the gap between speaking and non-speaking communities by making communication accessible, inclusive, and human.
+We empower users through real-time sign language translation, guided practice, and meaningful connections — ensuring that every voice, spoken or signed, can be seen, heard, and understood.
 
             </p>
            
@@ -77,29 +76,29 @@ Using facial biometric authentication, we enable users to pay securely without t
     </main> */}
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
   <div className="p-4 rounded-lg shadow bg-white text-center">
-    <div className="text-4xl mb-2">👁️</div>
-    <h3 className="font-semibold text-lg">AI-driven facial ID Powered</h3>
-    <p className="text-sm text-gray-600">Pay instantly with facial recognition — no cards, phones, or pins required.</p>
+    <div className="text-4xl mb-2">🧠</div>
+    <h3 className="font-semibold text-lg">AI-Guided Practice</h3>
+    <p className="text-sm text-gray-600">Learn sign language with real-time feedback, visual demos, and motion tracking — perfect for building confidence step-by-step.</p>
   </div>
   <div className="p-4 rounded-lg shadow bg-white text-center">
-    <div className="text-4xl mb-2">🛡️</div>
-    <h3 className="font-semibold text-lg">Secure by Design</h3>
-    <p className="text-sm text-gray-600">Biometric data never leaves the device, ensuring top-notch privacy and protection.</p>
+    <div className="text-4xl mb-2">✋</div>
+    <h3 className="font-semibold text-lg">Live Sign Translation</h3>
+    <p className="text-sm text-gray-600"> Translate sign language into text in real-time — making conversations smooth, fast, and accessible for everyone.</p>
   </div>
   <div className="p-4 rounded-lg shadow bg-white text-center">
-    <div className="text-4xl mb-2">⚡</div>
-    <h3 className="font-semibold text-lg">Frictionless Payments</h3>
-    <p className="text-sm text-gray-600">No waiting. No wallets. Just look and go — perfect for modern users on the move.</p>
+    <div className="text-4xl mb-2">📞</div>
+    <h3 className="font-semibold text-lg">Seamless Communication</h3>
+    <p className="text-sm text-gray-600">Connect instantly via video calls — with built-in sign translation and silent interaction, no voice needed.</p>
   </div>
   <div className="p-4 rounded-lg shadow bg-white text-center">
     <div className="text-4xl mb-2">🌍</div>
-    <h3 className="font-semibold text-lg">Global Ready</h3>
-    <p className="text-sm text-gray-600">Nimbus scales across borders and supports diverse markets and merchants.</p>
+    <h3 className="font-semibold text-lg"> Built for Everyone</h3>
+    <p className="text-sm text-gray-600">DuoVoice bridges the gap between Deaf and hearing users across languages and regions, making communication universal.</p>
   </div>
 </div>
 
-<h2 className="text-xl font-bold text-center mt-10">Start Paying Smarter</h2>
-<p className="text-center text-gray-600">Join Nimbus and experience the future of payment — contactless, secure, and effortless.</p>
+<h2 className="text-xl font-bold text-center mt-10">Start Communicating Freely</h2>
+<p className="text-center text-gray-600">Join DuoVoice and experience a new era of connection — inclusive, intuitive, and barrier-free.</p>
 <div className="flex justify-center mt-4">
 
 

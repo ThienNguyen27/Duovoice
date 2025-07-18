@@ -126,7 +126,7 @@ export default function Home() {
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
                  <div className="flex justify-center items-center ">
                                 <Image
-                                  src="/practice_icon.jpg"
+                                  src="/practice_icon_transparent.png"
                                   alt="pratice icon"
                                   width={60}
                                   height={60}
@@ -134,7 +134,7 @@ export default function Home() {
                               </div>
                 <h3 className="text-xl font-semibold mb-2">Practice Mode</h3>
                 <p className="text-gray-600">
-                  Pay instantly using facial recognition (no phones, cards, or cash required.)
+                  Featuring visual demonstrations, real-time hand tracking, and instant feedback, this mode empowers both Deaf and hearing users to sign with confidence and clarity.
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
@@ -148,7 +148,7 @@ export default function Home() {
                               </div>
                 <h3 className="text-xl font-semibold mb-2">Live Call Translation</h3>
                 <p className="text-gray-600">
-                  Automatically detects signs and translates them into voice (and vice versa), creating a natural conversation experience.
+                  Automatically detects signs and translates them into text (and vice versa), creating a natural conversation experience.
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
