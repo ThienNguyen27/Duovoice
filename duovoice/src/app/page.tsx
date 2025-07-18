@@ -134,7 +134,7 @@ export default function Home() {
                               </div>
                 <h3 className="text-xl font-semibold mb-2">Practice Mode</h3>
                 <p className="text-gray-600">
-                  Pay instantly using facial recognition (no phones, cards, or cash required.)
+                  Featuring visual demonstrations, real-time hand tracking, and instant feedback, this mode empowers both Deaf and hearing users to sign with confidence and clarity.
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
