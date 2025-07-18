@@ -1,4 +1,5 @@
 'use client';
+import Image from "next/image";
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -78,7 +79,7 @@ export default function Home() {
 
   return (
     
-  <div className="min-h-screen bg-[#FDF6E9] overflow-hidden">
+  <div className="min-h-screen bg-[#E6F0FA] overflow-hidden">
       <Header />
       <main>
         
@@ -104,11 +105,10 @@ export default function Home() {
             transition={{ duration: 0.7, delay: 0.3 }}
           >
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              No cash. No touch. No delay.
+              Speak Through Sign, Connect Through Heart
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Contactless payment using Facial biometric authentication enables secure,<br />
-               biometric authentication by allowing users to authorize transactions simply by scanning their face.
+              Duovoice connects non-speaking and speaking users through live video and guided sign-language,<br/> making communication effortless and inclusive.
             </p>  
           </motion.div>
         </section>
@@ -133,7 +133,7 @@ export default function Home() {
 
                  <div className="flex justify-center items-center ">
                                 {/* <Image
-                                  src="/face-id1.png"
+                                  src="/Duovoice\duovoice\public\DuoVoice_Logo_DeafBlue_Transparent.png"
                                   alt="Face-ID Logo"
                                   width={60}
                                   height={60}
