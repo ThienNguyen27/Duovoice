@@ -1,44 +1,41 @@
-'use client';
-import Image from "next/image";
+"use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { 
   useMotionValue,
   useTransform,
   useAnimation,
   motion
-} from "framer-motion"; 
+} from "framer-motion";
 
 import Header from "./components/Header";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },    
+  transition: { duration: 0.5 }
 };
 
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.2,
-    },
-  },
+      staggerChildren: 0.2
+    }
+  }
 };
 
 const draw = {
   hidden: { pathLength: 0, opacity: 0 },
-  visible: (i: number) => {
-    const delay = i * 0.1; // Reduced delay between elements
-    return {
-      pathLength: 1,
-      opacity: 1,
-      transition: {
-        pathLength: { delay, type: "spring", duration: 0.8, bounce: 0 }, // Reduced duration
-        opacity: { delay, duration: 0.01 },
-      },
-    };
-  },
+  visible: (i: number) => ({
+    pathLength: 1,
+    opacity: 1,
+    transition: {
+      pathLength: { delay: i * 0.1, type: "spring", duration: 0.8, bounce: 0 },
+      opacity: { delay: i * 0.1, duration: 0.01 }
+    }
+  })
 };
 
 const pulse = {
@@ -46,8 +43,8 @@ const pulse = {
   transition: {
     duration: 2,
     repeat: Number.POSITIVE_INFINITY,
-    ease: "easeInOut",
-  },
+    ease: "easeInOut"
+  }
 };
 
 export default function Home() {
@@ -61,10 +58,7 @@ export default function Home() {
 
   useEffect(() => {
     const updateDimensions = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
     };
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
@@ -79,9 +73,18 @@ export default function Home() {
   }
 
   return (
-    
-  <div className="min-h-screen bg-[#E6F0FA] overflow-hidden">
+    <div className="relative min-h-screen bg-[#E6F0FA] overflow-hidden">
+      {/* Login Button */}
+      <div className="absolute top-4 right-4 z-20">
+        <Link href="/login">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Log In
+          </button>
+        </Link>
+      </div>
+
       <Header />
+
       <main>
         <section
           className="relative min-h-screen flex items-center justify-center overflow-hidden"
@@ -89,11 +92,7 @@ export default function Home() {
         >
           <motion.div
             className="absolute inset-0"
-            style={{
-              rotateX: rotateX,
-              rotateY: rotateY,
-              perspective: 1000,
-            }}
+            style={{ rotateX, rotateY, perspective: 1000 }}
           />
 
           <motion.div
@@ -106,8 +105,9 @@ export default function Home() {
               Speak Through Sign, Connect Through Heart
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Duovoice connects non-speaking and speaking users through live video and guided sign-language,<br/> making communication effortless and inclusive.
-            </p>  
+              Duovoice connects non-speaking and speaking users through live video and guided sign-language,<br/>
+              making communication effortless and inclusive.
+            </p>
           </motion.div>
         </section>
 
@@ -123,23 +123,8 @@ export default function Home() {
               whileInView="animate"
               viewport={{ once: true }}
             >
-              <motion.div
-                className="text-center"
-                variants={fadeIn}
-                whileHover={{ y: -10 }}
-              >
-
-                 <div className="flex justify-center items-center ">
-                                {/* <Image
-                                  src="/Duovoice\duovoice\public\DuoVoice_Logo_DeafBlue_Transparent.png"
-                                  alt="Face-ID Logo"
-                                  width={60}
-                                  height={60}
-                                /> */}
-                              </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  Seamless Facial biometric Checkout
-                </h3>
+              <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
+                <h3 className="text-xl font-semibold mb-2">Seamless Facial biometric Checkout</h3>
                 <p className="text-gray-600">
                   Pay instantly using facial recognition (no phones, cards, or cash required.)
                 </p>
@@ -151,9 +136,7 @@ export default function Home() {
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
-                <h3 className="text-xl font-semibold mb-2">
-                  Intelligent Store Insights
-                </h3>
+                <h3 className="text-xl font-semibold mb-2">Intelligent Store Insights</h3>
                 <p className="text-gray-600">
                   Track inventory, customer behavior, and sales in real time with an AI-powered dashboard.
                 </p>
@@ -162,6 +145,7 @@ export default function Home() {
           </div>
         </section>
       </main>
+
       <footer className="border-t border-neutral-200 py-8 relative z-10">
         <div className="container mx-auto px-4">
           <motion.div
