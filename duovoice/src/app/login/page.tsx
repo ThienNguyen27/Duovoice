@@ -28,7 +28,7 @@ export default function LoginPage() {
       // Persist the username for session
       localStorage.setItem("username", name);
       // Redirect to chat
-      router.push("/chat");
+      router.push("/homepage");
     } catch (err: any) {
       setError(err.message);
     } finally {
