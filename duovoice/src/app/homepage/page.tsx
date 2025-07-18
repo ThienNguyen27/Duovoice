@@ -50,7 +50,7 @@ export default function Homepage() {
             <MessageCircle className="w-5 h-5" />
             Chat
           </Link>
-          <Link href="/about" className="inline-flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
+          <Link href="/logged_in_about" className="inline-flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
             <Info className="w-5 h-5" />
             About
           </Link>

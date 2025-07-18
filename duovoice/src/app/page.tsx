@@ -73,18 +73,28 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#E6F0FA] overflow-hidden">
-      {/* Login Button */}
-      <div className="absolute top-4 right-4 z-20">
-        <Link href="/login">
 
-            Log In
 
-        </Link>
-      </div>
+        <div className="relative min-h-screen bg-[#E6F0FA] overflow-hidden">
+      {/* Top‑bar: logo + About on left, Log In on right */}
+      <header className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
+        <div className="flex items-center space-x-6">
+          <Header />  
+          <Link
+            href="/about"
+            className="text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            About
+          </Link>
+        </div>
+        <div className="absolute top-4 right-4 z-20">
+         <Link href="/login">
 
-      <Header />
+             Log In
 
+         </Link>
+         </div>
+      </header>
       <main>
         <section
           className="relative min-h-screen flex items-center justify-center overflow-hidden"
