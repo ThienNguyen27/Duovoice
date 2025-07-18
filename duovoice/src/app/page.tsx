@@ -124,21 +124,45 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
-                <h3 className="text-xl font-semibold mb-2">Seamless Facial biometric Checkout</h3>
+                 <div className="flex justify-center items-center ">
+                                <Image
+                                  src="/practice_icon.jpg"
+                                  alt="pratice icon"
+                                  width={60}
+                                  height={60}
+                                />
+                              </div>
+                <h3 className="text-xl font-semibold mb-2">Practice Mode</h3>
                 <p className="text-gray-600">
                   Pay instantly using facial recognition (no phones, cards, or cash required.)
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
-                <h3 className="text-xl font-semibold mb-2">Smart Grocery Recognition</h3>
+                <div className="flex justify-center items-center ">
+                                <Image
+                                  src="/call_icon.png"
+                                  alt="call icon"
+                                  width={60}
+                                  height={60}
+                                />
+                              </div>
+                <h3 className="text-xl font-semibold mb-2">Live Call Translation</h3>
                 <p className="text-gray-600">
-                  AI vision auto-detects grocery items instantly
+                  Automatically detects signs and translates them into voice (and vice versa), creating a natural conversation experience.
                 </p>
               </motion.div>
               <motion.div className="text-center" variants={fadeIn} whileHover={{ y: -10 }}>
-                <h3 className="text-xl font-semibold mb-2">Intelligent Store Insights</h3>
+                 <div className="flex justify-center items-center ">
+                                <Image
+                                  src="/connection_icon.png"
+                                  alt="connection icon"
+                                  width={60}
+                                  height={60}
+                                />
+                              </div>
+                <h3 className="text-xl font-semibold mb-2">Smart Connections</h3>
                 <p className="text-gray-600">
-                  Track inventory, customer behavior, and sales in real time with an AI-powered dashboard.
+                  After a call, users can add each other as contacts, exchange notes, or schedule future sessions.
                 </p>
               </motion.div>
             </motion.div>
@@ -156,7 +180,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <p className="text-gray-600 text-sm">
-              © {new Date().getFullYear()} Nimbus. All rights reserved.
+              © {new Date().getFullYear()} Duovoice. All rights reserved.
             </p>
           </motion.div>
         </div>
