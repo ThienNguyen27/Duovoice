@@ -50,5 +50,5 @@ duovoice\model\asl_alphabet_mlp.h5
 duovoice\model\label_encoder.pkl
 
 duovoice\.env.local
-
+duovoice\backend\__pycache__
 duovoice\lib\.env
