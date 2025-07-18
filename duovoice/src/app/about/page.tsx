@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Header from '@/app/components/header'
+import Header from '@/app/components/Header'
 export default function AboutPage() {
   return (
       <div className="min-h-screen bg-[#FDF6E9]">
