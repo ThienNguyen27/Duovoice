@@ -57,18 +57,14 @@ app.add_middleware(
     allow_methods=["*"]
 )
 
+# --- Load the Keras model ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+MODEL_PATH   = PROJECT_ROOT / "public" / "model" / "asl_alphabet_mlp.h5"
+if not MODEL_PATH.exists():
+    raise RuntimeError(f"Model file not found at {MODEL_PATH!r}")
 
-MODEL_PATH = Path(
-    os.getenv("ASL_H5_PATH", PROJECT_ROOT / "public" / "model" / "asl_alphabet_mlp.h5")
-)
+h5_model = tf.keras.models.load_model(str(MODEL_PATH))
 
-try:
-    h5_model = tf.keras.models.load_model(MODEL_PATH)
-except Exception as e:
-    raise RuntimeError(f"Failed to load ASL model at {MODEL_PATH}: {e}")
-
-# Same labels as front-end
 LABELS = [
   'A','B','C','D','E','F','G','H','I',
   'K','L','M','N','O','P','Q','R','S',
@@ -77,27 +73,24 @@ LABELS = [
 ]
 
 class PredictPayload(BaseModel):
-    landmarks: list[list[float]]  # shape: (21, 2)
+    # now expects 21 triples: [x,y,z]
+    landmarks: list[list[float]]
 
 @app.post("/predict")
 def predict_asl(payload: PredictPayload):
-    lm = np.array(payload.landmarks, dtype=np.float32)  # (21,2)
-    # 1) center on wrist
+    lm = np.array(payload.landmarks, dtype=np.float32)  # shape (21,3)
+    # center on wrist
     lm -= lm[0]
-    # 2) scale to unit size
+    # normalize
     dists = np.linalg.norm(lm, axis=1)
-    max_dist = float(np.max(dists)) if np.any(dists) else 1.0
-    lm /= max_dist
-    # 3) flatten and predict
+    lm /= (dists.max() or 1.0)
+    # flatten to (1, 63)
     flat = lm.flatten()[None, :]
-    preds = h5_model.predict(flat)  # (1, 28)
+    preds = h5_model.predict(flat)
     idx = int(np.argmax(preds, axis=1)[0])
-    try:
-        letter = LABELS[idx]
-    except IndexError:
+    if idx >= len(LABELS):
         raise HTTPException(500, detail="Model output index out of range")
-    return {"letter": letter,  "confidence": float(np.max(preds))}
-
+    return {"letter": LABELS[idx], "confidence": float(preds.max())}
 @app.on_event("startup")
 def clear_queues():
     # remove leftover entries from previous runs
@@ -333,7 +326,7 @@ async def get_history(room_id: str):
     history.sort(key=lambda m: m.time_stamp)
     return history
 
-# matching normal with muted person currently take in a json
+# Producer-consumer for matching users
 @app.post("/match")
 async def match_user(user_id: str = Body(...)):
     # 1) Clean up any stale entries for this user
@@ -354,16 +347,25 @@ async def match_user(user_id: str = Body(...)):
     peer_id = r.lpop(other_queue)
     if peer_id:
         room_id = uuid.uuid4().hex
-        # store both room and peer for each user
-        r.hset("matches", user_id, room_id)
-        r.hset("matches", peer_id, room_id)
-        r.hset("peers", user_id, peer_id)
-        r.hset("peers", peer_id, user_id)
-        return {"status": "matched", "room_id": room_id, "peer_id": peer_id}
+        caller_id = user_id       # current user sends the offer
+        callee_id = peer_id
+
+        r.hset("matches", caller_id, room_id)
+        r.hset("matches", callee_id, room_id)
+        r.hset("peers", caller_id, callee_id)
+        r.hset("peers", callee_id, caller_id)
+
+        return {
+            "status": "matched",
+            "room_id": room_id,
+            "peer_id": callee_id,
+            "caller_id": caller_id  # 👈 include caller info
+        }
 
     # 5) No peer yet, enqueue this user
     r.rpush(my_queue, user_id)
     return {"status": "waiting"}
+
 
 @app.get("/match/status/{user_id}")
 async def match_status(user_id: str):
