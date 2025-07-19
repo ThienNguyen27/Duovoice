@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 type SignalingMessage =
@@ -8,7 +8,9 @@ type SignalingMessage =
   | { type: 'candidate'; data: RTCIceCandidateInit; sender: string }
   | { type: 'friend-request'; sender: string }
   | { type: 'friend-accept'; sender: string }
-  | { type: 'friend-decline'; sender: string };
+  | { type: 'friend-decline'; sender: string }
+  | { type: 'assist_request' | 'assist_input'; text?: string; sender: string }
+  | { type: 'assist_end'; text?: string; sender: string };
 
 interface VideoCallProps {
   roomId: string;
@@ -24,11 +26,43 @@ export default function VideoCall({
   const [isFriend, setIsFriend] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [incomingRequest, setIncomingRequest] = useState(false);
+  const [assistMode, setAssistMode] = useState(false); // for enabled user
+  const [isAssistActive, setIsAssistActive] = useState(false); // for disabled user
+  const [assistInput, setAssistInput] = useState('');
+
   const localRef = useRef<HTMLVideoElement>(null);
   const remoteRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const router = useRouter();
+
+  // Suggestions for assist input
+  const COMMON_WORDS = [
+    'the','to','and','a','in','that','is','was','he','for','it','with','as','his','on','be','at','by','I','this',
+    'had','not','are','but','from','or','have','an','they','which','one','you','were','her','all','she','there',
+    'would','their','we','him','been','has','when','who','will','more','no','if','out','so','said','what','up',
+    'its','about','into','than','them','can','only','other','new','some','could','time','these','two','may','then',
+    'do','first','any','my','now','such','like','our','over','man','me','even','most','made','after','also','did',
+    'many','before','must','through','back','years','where','much','your','way','well','down','should','because'
+  ];
+  const suggestions = useMemo(() => {
+    const parts = assistInput.split(' ');
+    const prefix = parts[parts.length - 1].toLowerCase();
+    if (!prefix) return [];
+    return COMMON_WORDS.filter(
+      w => w.startsWith(prefix) && w.toLowerCase() !== prefix
+    ).slice(0, 5);
+  }, [assistInput]);
+
+  // Helper to send signaling or assist messages
+  const sendSignal = (msg: any) => {
+    const ws = wsRef.current;
+    if (!ws) return;
+    const json = JSON.stringify(msg);
+    if (ws.readyState === WebSocket.OPEN) ws.send(json);
+    else ws.addEventListener('open', () => ws.send(json), { once: true });
+  };
+
 
   useEffect(() => {
     let mounted = true;
@@ -95,6 +129,21 @@ export default function VideoCall({
           setRequestSent(false);
           alert(`${peerId} declined your friend request.`);
           break;
+          case 'assist_request':
+          if (msg.sender !== userId) {
+            setIsAssistActive(true);
+          }
+          break;
+        case 'assist_input':
+          if (msg.sender !== userId && msg.text !== undefined) {
+            setAssistInput(msg.text);
+          }
+          break;
+        case 'assist_end':
+          setAssistMode(false);     // enabled side
+          setIsAssistActive(false); // disabled side
+          setAssistInput('');       // clear any stale text
+    break;
       }
     };
 
@@ -135,6 +184,23 @@ export default function VideoCall({
       pc.close();
     };
   }, [roomId, userId, peerId]);
+
+  // Assist mode handlers
+  const handleAssistRequest = () => {
+    setAssistMode(true);
+    sendSignal({ type: 'assist_request', sender: userId });
+  };
+  const updateAssist = (newText: string) => {
+    setAssistInput(newText);
+    sendSignal({ type: 'assist_input', text: newText, sender: userId });
+  };
+  const appendAssist = () => updateAssist(assistInput + '');
+  const assistWrite = () => appendAssist();
+  const assistSpace = () => updateAssist(assistInput + ' ');
+  const assistDel   = () => updateAssist(assistInput.slice(0, -1));
+  const applySuggestion = (word: string) => updateAssist(
+    assistInput.split(' ').slice(0,-1).concat(word).join(' ') + ' '
+  );
 
   const handleAddFriend = () => {
     wsRef.current &&
@@ -222,6 +288,72 @@ export default function VideoCall({
         >
           Exit
         </button>
+
+         <button
+      onClick={handleAssistRequest}
+      className="bg-yellow-500 px-4 py-2 text-white rounded"
+    >
+      Assist Mode
+    </button>
+      <h2 className="text-xl font-bold">In call with {peerId}</h2>
+    <div className="flex gap-4">
+      <video ref={localRef} autoPlay muted playsInline className="w-64 h-48 bg-black" />
+      <video ref={remoteRef} autoPlay playsInline className="w-64 h-48 bg-black" />
+    </div>
+
+    {assistMode && (
+  <button
+    onClick={() => sendSignal({ type: 'assist_end', sender: userId })}
+    className="bg-red-500 px-4 py-2 text-white rounded"
+  >
+    Stop Assist
+  </button>
+)}
+
+    {/* Enabled side: display assist input live */}
+    {assistMode && (
+      <div className="w-full max-w-lg p-3 border rounded bg-gray-100">
+        <h3 className="font-semibold">Assist Input:</h3>
+        <p className="whitespace-pre-wrap">{assistInput}</p>
+      </div>
+    )}
+
+    {/* Disabled side: spelling UI when assist is active */}
+    {isAssistActive && (
+      <div className="w-full max-w-lg p-4 border rounded bg-gray-50 space-y-3">
+        <div className="text-xl font-medium">Spell your answer:</div>
+        <div className="flex items-center space-x-2">
+          <button onClick={assistWrite} className="px-3 py-1 bg-blue-600 text-white rounded">
+            Write Letter
+          </button>
+          <button onClick={assistSpace} className="px-3 py-1 bg-indigo-600 text-white rounded">
+            Space
+          </button>
+          <button onClick={assistDel} className="px-3 py-1 bg-red-600 text-white rounded">
+            Delete
+          </button>
+        </div>
+
+        {/* Suggestions */}
+        {suggestions.length > 0 && (
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Suggestions:</div>
+            <div className="grid grid-cols-2 gap-2">
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => applySuggestion(s)}
+                  className="p-2 border rounded hover:bg-gray-100"
+                >
+                  <span className="font-bold mr-1">{i + 1}.</span> {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        </div>
+    )}
+
       </div>
     </div>
   );

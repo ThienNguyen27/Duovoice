@@ -58,3 +58,9 @@ class Friend(BaseModel):
     user_id: str
     friend_id: str
 
+class FriendOut(BaseModel):
+    """Model representing a friend to return in API responses"""
+    uid: str
+    name: str
+    since: Optional[datetime] = None
+

@@ -16,7 +16,7 @@ export function useChat(roomId: string, userId: string) {
     if (!roomId || !userId) return;
 
     // 1) Load history
-    fetch(`http://localhost:8000/messages/${userId}/${roomId}`)
+    fetch(`http://localhost:8000/chat/history/${roomId}`)
       .then(r => r.json())
       .then((history) => {
         console.log('history:', history);
@@ -25,7 +25,7 @@ export function useChat(roomId: string, userId: string) {
       .catch(() => setMessages([]));
 
     // 2) Open WS
-    const ws = new WebSocket(`ws://localhost:8000/ws/chat/${roomId}?user=${userId}`);
+    const ws = new WebSocket(`ws://localhost:8000/ws/chat/${roomId}`);
     ws.onmessage = e => {
       try {
         const msg = JSON.parse(e.data) as Message;
@@ -40,21 +40,27 @@ export function useChat(roomId: string, userId: string) {
   }, [roomId, userId]);
 
   function send(content: string, to: string) {
-    const payload = { room_id: roomId, sender_id: userId, receiver_id: to, content };
-    // 1) Persist via HTTP
-    fetch('http://localhost:8000/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-      .then(r => r.json())
-      .then((msg: Message) => {
-        // 2) Local echo
-        setMessages(m => [...m, msg]);
-        // 3) Notify peer
-        wsRef.current?.send(JSON.stringify(msg));
-      })
-      .catch(console.error);
+    // const payload = { room_id: roomId, sender_id: userId, receiver_id: to, content };
+    // // 1) Persist via HTTP
+    // fetch('http://localhost:8000/messages', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(payload),
+    // })
+    //   .then(r => r.json())
+    //   .then((msg: Message) => {
+    //     // 2) Local echo
+    //     setMessages(m => [...m, msg]);
+    //     // 3) Notify peer
+    //     // wsRef.current?.send(JSON.stringify(msg));
+    //     wsRef.current?.send(JSON.stringify(payload));
+    //   })
+    //   .catch(console.error);
+
+    // build the DirectMessageCreate payload
+  const payload = { room_id: roomId, sender_id: userId, receiver_id: to , content };
+  // send _only_ over WebSocket
+  wsRef.current?.send(JSON.stringify(payload));
   }
 
   return { messages, send };

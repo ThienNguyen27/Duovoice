@@ -10,7 +10,7 @@ export default function Homepage() {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    const u = sessionStorage.getItem('username');
+    const u = localStorage.getItem('username');
     if (!u) {
       router.replace('/login');
     } else {

@@ -10,11 +10,19 @@ from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation, Friend, DirectMessage, DirectMessageCreate
+from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation, Friend, DirectMessage, DirectMessageCreate, FriendOut
 import bcrypt
 import redis
 from typing import List, Dict
 from datetime import datetime
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    "Detected filter using positional arguments",
+    category=UserWarning,
+    module="google.cloud.firestore_v1.base_collection"
+)
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
 load_dotenv(dotenv_path=env_path)
@@ -219,16 +227,34 @@ async def add_friend(username: str, inv: FriendInvitation):
 
 
 # List friends 
-@app.get("/users/{user_uid}/friends", response_model=List[Friend])
+@app.get("/users/{user_uid}/friends", response_model=List[FriendOut])
 async def list_friends(user_uid: str):
     user_ref = db.collection("users").document(user_uid)
     if not user_ref.get().exists:
         raise HTTPException(404, "User not found")
-    query = user_ref.collection("friends").where("status", "==", "Accept")
-    return [
-        Friend(id=doc.id, user_id=user_uid, friend_id=doc.id)
-        for doc in query.stream()
-    ]
+
+    # Only accepted invitations
+    invites = user_ref.collection("friends").where("status", "==", "Accept").stream()
+
+    friends: List[FriendOut] = []
+    for inv_doc in invites:
+        inv = inv_doc.to_dict()
+        # Figure out which field points at *the other* user
+        if inv["requester_id"] == user_uid:
+            friend_id = inv["receiver_id"]
+        else:
+            friend_id = inv["requester_id"]
+
+        # Lookup their display name
+        user_doc = db.collection("users").document(friend_id).get()
+        display_name = user_doc.get("name") if user_doc.exists else friend_id
+
+        friends.append(FriendOut(
+            uid   = friend_id,
+            name  = display_name,
+            since = inv.get("time_stamp")
+        ))
+    return friends
 
 chat_rooms: Dict[str, List[WebSocket]] = {} # in-memory storage for chat rooms
 # WebSocket for chat
@@ -286,12 +312,27 @@ async def send_message(msg: DirectMessageCreate):
 # Get chat history for a room
 @app.get("/chat/history/{room_id}", response_model=List[DirectMessage])
 async def get_history(room_id: str):
-    col = db.collection("direct_messages")
-    # assume you wrote each DM under `room_id` field
-    q = col.where("room_id", "==", room_id).order_by("time_stamp")
+    # 1) Query your existing direct_messages by room_id
+    coll = db.collection("direct_messages")
+    q    = coll.where("room_id", "==", room_id)
     docs = list(q.stream())
-    # build Pydantic models and return them directly
-    return [DirectMessage(**d.to_dict()) for d in docs]
+
+    # 2) Map to your Pydantic model, injecting the room_id
+    history: List[DirectMessage] = []
+    for doc in docs:
+        data = doc.to_dict()
+        history.append(DirectMessage(
+            id          = doc.id,
+            room_id     = room_id,
+            sender_id   = data["sender_id"],
+            receiver_id = data["receiver_id"],
+            content     = data["content"],
+            time_stamp  = data["time_stamp"],
+        ))
+
+    # 3) Sort in Python by timestamp (you may remove if Firestore indexed time_stamp)
+    history.sort(key=lambda m: m.time_stamp)
+    return history
 
 # matching normal with muted person currently take in a json
 @app.post("/match")

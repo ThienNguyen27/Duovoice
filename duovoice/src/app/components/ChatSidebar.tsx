@@ -38,8 +38,8 @@ export default function ChatSidebar({
         </Link>
       </div>
       <ul className="flex-1 overflow-y-auto">
-        {friends.map(f => (
-          <li key={f.uid}>
+        {friends.map((f, idx) => (
+          <li key={`${f.uid}-${idx}`}>
             <button
               onClick={() => onSelect(f)}
               className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition ${
@@ -47,7 +47,7 @@ export default function ChatSidebar({
               }`}
             >
               <div className="w-8 h-8 rounded-full bg-blue-300 flex items-center justify-center text-white font-bold">
-                {f.name.charAt(0)}
+                { (f.name ?? f.uid ?? '')[0] || '' }
               </div>
               <div>
                 <div className="text-gray-800">{f.name}</div>

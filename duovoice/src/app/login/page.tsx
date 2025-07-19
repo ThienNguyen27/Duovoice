@@ -26,7 +26,9 @@ export default function LoginPage() {
         throw new Error(body.detail || "Login failed");
       }
       // Each user can be a tab
-      sessionStorage.setItem("username", name);
+      // sessionStorage.setItem("username", name);
+      console.log(name)
+      localStorage.setItem("username", name);
       // Redirect to chat
       router.push("/homepage");
     } catch (err: any) {
