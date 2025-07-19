@@ -51,7 +51,7 @@ app = FastAPI()
 # Allow frontend to connect
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_headers=["*"],
     allow_methods=["*"]
@@ -248,7 +248,6 @@ async def list_friends(user_uid: str):
         # Lookup their display name
         user_doc = db.collection("users").document(friend_id).get()
         display_name = user_doc.get("name") if user_doc.exists else friend_id
-
         friends.append(FriendOut(
             uid   = friend_id,
             name  = display_name,
