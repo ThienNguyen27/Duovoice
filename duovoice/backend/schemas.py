@@ -30,10 +30,17 @@ class PracticeProgress(BaseModel):
 
 class DirectMessage(BaseModel):
     id: str
+    room_id: str
     sender_id: str
     receiver_id: str
     content: str
     time_stamp: datetime
+
+class DirectMessageCreate(BaseModel):
+    room_id: str
+    sender_id: str
+    receiver_id: str
+    content: str
 
 class FriendInvitationCreate(BaseModel):
     requester_id: str

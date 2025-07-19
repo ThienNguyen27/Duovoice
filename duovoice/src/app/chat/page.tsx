@@ -1,155 +1,136 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ChatSidebar, { Friend } from '../components/ChatSidebar';
-
-interface ApiFriend {
-  id: string;
-  user_id: string;
-  friend_id: string;
-}
-
-interface Message {
-  sender: string;
-  content: string;
-  timestamp: string;
-}
+import { useChat } from '../hooks/useChat';
 
 export default function ChatPage() {
+  // 1) load logged‑in user
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-
-  // 1) Load current user
   useEffect(() => {
-    const u = localStorage.getItem('username');
-    setCurrentUser(u);
+    setCurrentUser(localStorage.getItem('username'));
   }, []);
 
-  // 2) Fetch and map friends once we know the user
+  // 2) Pull roomId from the URL
+  const params = useSearchParams();
+  const roomId = params.get('roomId') ?? '';
+
+  // 3) Always call this hook (it internally no‑ops if userId/roomId are blank)
+  const { messages, send } = useChat(roomId, currentUser ?? '');
+
+  // 4) Sidebar state
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+
+  // 5) Message draft
+  const [draft, setDraft] = useState('');
+
+  // 6) Fetch friends once we have a real user
   useEffect(() => {
     if (!currentUser) return;
-    (async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:8000/users/${currentUser}/friends`
-        );
-        if (!res.ok) throw new Error('Failed to load friends');
-        const apiFriends = (await res.json()) as ApiFriend[];
-
-        // Map to ChatSidebar.Friend shape
-        const uiFriends: Friend[] = apiFriends.map((f) => ({
-          uid: f.id,
-          name: f.friend_id,   // use the friend_id as display name
-          since: null,         // or pull a timestamp if you store one
-        }));
-
-        setFriends(uiFriends);
-      } catch (err) {
-        console.error(err);
-      }
-    })();
+    fetch(`http://localhost:8000/users/${currentUser}/friends`)
+      .then(res => {
+        if (!res.ok) throw new Error(res.statusText);
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setFriends(
+            data.map(f => ({
+              uid:   f.id,
+              name:  f.friend_id ?? f.id,
+              since: null,
+            }))
+          );
+        } else {
+          console.error('Friends API did not return an array:', data);
+          setFriends([]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load friends:', err);
+        setFriends([]);
+      });
   }, [currentUser]);
 
-  const handleSelectFriend = (friend: Friend) => {
-    setSelectedFriend(friend);
-    setMessages([
-      { sender: friend.uid, content: 'Hi there!', timestamp: '10:00 AM' },
-      { sender: currentUser!, content: 'Hello!', timestamp: '10:01 AM' },
-    ]);
-  };
-
-  const handleSendMessage = () => {
-    if (!currentUser || !selectedFriend || !newMessage.trim()) return;
-    const msg: Message = {
-      sender: currentUser,
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-    };
-    setMessages((prev) => [...prev, msg]);
-    setNewMessage('');
-  };
-
+  // 7) Early-render guard (Hooks are still in place above!)
   if (!currentUser) {
     return (
-      <div className="flex-1 flex items-center justify-center">Loading…</div>
+      <div className="flex-1 flex items-center justify-center">
+        Loading…
+      </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#F9FAFB]">
+    <div className="flex h-screen">
+      {/* Sidebar */}
       <ChatSidebar
         username={currentUser}
         friends={friends}
         selectedFriendId={selectedFriend?.uid}
-        onSelect={handleSelectFriend}
+        onSelect={setSelectedFriend}
       />
 
-      <main className="flex-1 flex flex-col">
-        {selectedFriend ? (
-          <>
-            <div className="p-4 border-b bg-white flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-300 flex items-center justify-center text-white font-bold uppercase">
-                {selectedFriend.name.charAt(0)}
-              </div>
-              <h2 className="text-lg font-medium">{selectedFriend.name}</h2>
-              <span className="ml-2 text-green-500 text-xs">● Online</span>
-            </div>
-
-            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#F4F6FA]">
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col ${
-                    m.sender === currentUser ? 'items-end' : 'items-start'
-                  }`}
-                >
-                  <div
-                    className={`px-4 py-2 rounded-2xl text-sm max-w-xs break-words shadow ${
-                      m.sender === currentUser
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    {m.content}
-                  </div>
-                  <span className="text-xs text-gray-400 mt-1">
-                    {m.timestamp}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 border-t bg-white flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="Type a message…"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <button
-                onClick={handleSendMessage}
-                className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition"
-              >
-                Send
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col justify-center items-center text-gray-400">
-            <div className="text-3xl mb-2">💬</div>
-            <p className="text-lg font-medium">
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col bg-[#F9FAFB]">
+        <div className="flex-1 overflow-y-auto p-4">
+          {!selectedFriend ? (
+            <div className="text-center text-gray-500 mt-20">
               Select a friend to start chatting
-            </p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center text-gray-500">No messages yet</div>
+          ) : (
+            messages.map(m => (
+              <div
+                key={m.id}
+                className={`flex mb-2 ${
+                  m.sender_id === currentUser
+                    ? 'justify-end'
+                    : 'justify-start'
+                }`}
+              >
+                <div className={`p-3 rounded-lg max-w-xs shadow ${
+                  m.sender_id === currentUser
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-900'
+                }`}>
+                  {m.content}
+                  <div className="text-xs text-gray-600 mt-1 text-right">
+                    {new Date(m.time_stamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {selectedFriend && (
+          <div className="p-4 border-t bg-white flex gap-2">
+            <input
+              className="flex-1 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="Type a message…"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                if (!draft.trim()) return;
+                send(draft.trim(), selectedFriend.uid);
+                setDraft('');
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            >
+              Send
+            </button>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

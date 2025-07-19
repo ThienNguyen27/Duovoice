@@ -10,10 +10,11 @@ from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation, Friend
+from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation, Friend, DirectMessage, DirectMessageCreate
 import bcrypt
 import redis
-from typing import List
+from typing import List, Dict
+from datetime import datetime
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
 load_dotenv(dotenv_path=env_path)
@@ -196,6 +197,7 @@ async def call_websocket(websocket: WebSocket, room_id: str):
         if not peers[room_id]:
             peers.pop(room_id, None)
 
+# Add a friend invitation
 @app.post("/users/{username}/friends",response_model=FriendInvitation,status_code=201)
 async def add_friend(username: str, inv: FriendInvitation):
     # 1) ensure the path‐param matches the payload
@@ -216,22 +218,80 @@ async def add_friend(username: str, inv: FriendInvitation):
     return inv
 
 
-# List friends under users/{user_uid}/friends
-@app.get("/users/{user_uid}/friends",response_model=List[Friend])
+# List friends 
+@app.get("/users/{user_uid}/friends", response_model=List[Friend])
 async def list_friends(user_uid: str):
     user_ref = db.collection("users").document(user_uid)
     if not user_ref.get().exists:
-        raise HTTPException(404, detail="User not found")
+        raise HTTPException(404, "User not found")
+    query = user_ref.collection("friends").where("status", "==", "Accept")
+    return [
+        Friend(id=doc.id, user_id=user_uid, friend_id=doc.id)
+        for doc in query.stream()
+    ]
 
-    friends: List[Friend] = []
-    for doc in user_ref.collection("friends").stream():
-        # doc.id is the friend’s user ID
-        friends.append(Friend(
-            id=doc.id,
-            user_id=user_uid,
-            friend_id=doc.id
-        ))
-    return friends
+chat_rooms: Dict[str, List[WebSocket]] = {} # in-memory storage for chat rooms
+# WebSocket for chat
+@app.websocket("/ws/chat/{room_id}")
+async def websocket_chat(websocket: WebSocket, room_id: str):
+    await websocket.accept()
+    chat_rooms.setdefault(room_id, []).append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            payload = DirectMessageCreate(**json.loads(data))
+
+            # 1) persist
+            dm_id = uuid.uuid4().hex
+            now = datetime.utcnow()
+            record = DirectMessage(
+                id=dm_id,
+                room_id=payload.room_id,
+                sender_id=payload.sender_id,
+                receiver_id=payload.receiver_id,
+                content=payload.content,
+                time_stamp=now,
+            )
+            db.collection("direct_messages").document(dm_id).set(record.dict())
+
+            # 2) broadcast
+            text = json.dumps(record.dict(), default=str)
+            for conn in chat_rooms[room_id]:
+                await conn.send_text(text)
+
+    except WebSocketDisconnect:
+        chat_rooms[room_id].remove(websocket)
+        if not chat_rooms[room_id]:
+            del chat_rooms[room_id]
+
+# Save DM
+@app.post("/messages", response_model=DirectMessage, status_code=201)
+async def send_message(msg: DirectMessageCreate):
+    # verify users exist...
+    dm_id = uuid.uuid4().hex
+    now   = datetime.utcnow()
+    record = DirectMessage(
+        id=dm_id,
+        room_id=msg.room_id,
+        sender_id=msg.sender_id,
+        receiver_id=msg.receiver_id,
+        content=msg.content,
+        time_stamp=now,
+    )
+    # persist to Firestore
+    db.collection("direct_messages").document(dm_id).set(record.dict())
+    # return the Pydantic model
+    return record
+
+# Get chat history for a room
+@app.get("/chat/history/{room_id}", response_model=List[DirectMessage])
+async def get_history(room_id: str):
+    col = db.collection("direct_messages")
+    # assume you wrote each DM under `room_id` field
+    q = col.where("room_id", "==", room_id).order_by("time_stamp")
+    docs = list(q.stream())
+    # build Pydantic models and return them directly
+    return [DirectMessage(**d.to_dict()) for d in docs]
 
 # matching normal with muted person currently take in a json
 @app.post("/match")
