@@ -31,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
             <Link href="/" className="flex items-center group">
               <div className="relative w-20 h-25 mr-2">
                 <Image
-                  src="/DuoVoice_Logo_DeafBlue_Transparent.png"
+                  src="/DuoVoice_Logo_Transparent.png"
                   alt="Traider Logo"
                   fill
                   className="object-contain"
@@ -46,32 +46,7 @@ const Header: React.FC<HeaderProps> = ({ isSignedIn }) => {
             </Link>
           </motion.div>
 
-          <nav className="hidden md:flex space-x-6">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <Link
-                href="/about"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                About
-              </Link>
-            </motion.div>
-             <Link href="/practice" className="text-gray-600 hover:text-gray-900 transition-colors">Practice</Link>
-              <Link href="/chat" className="text-gray-600 hover:text-gray-900 transition-colors">Chat</Link>
-              <Link href="/call" className="text-gray-600 hover:text-gray-900 transition-colors">Call</Link>
-              
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-             
-            </motion.div>
-            
-          </nav>
+
           
         </div>
 

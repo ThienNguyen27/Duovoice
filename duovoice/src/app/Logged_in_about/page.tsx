@@ -5,7 +5,7 @@ import Header from "@/app/components/header";
 // import WhyItsSafe from '@/components/WhyItsSafe';
 
 import Link from "next/link";
-
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 
@@ -26,15 +26,36 @@ const staggerChildren = {
 export default function About() {
   return (
     <div className="relative min-h-screen bg-[#E6F0FA] overflow-hidden">
-        <Header/>
-              {/* Login Button */}
-      <div className="absolute top-4 right-4 z-20">
-        <Link href="/login">
-
-            Log In
-
-        </Link>
+<header className="w-full z-10">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center space-x-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Link href="/homepage" className="flex items-center group">
+              <div className="relative w-20 h-25 mr-2">
+                <Image
+                  src="/DuoVoice_Logo_Transparent.png"
+                  alt="Traider Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <span className="text-2xl font-bold text-gray-800 relative">
+                Duo
+                <span className="text-[#0072CE]">Voice</span>
+                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-[#408830] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
+              </span>
+            </Link>
+          </motion.div>
+          </div>
       </div>
+
+    </header>
+
       <main className="container mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { getFriends, Friend } from "../../../public/lib/api";
-
-import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -28,42 +26,41 @@ export default function ChatSidebar({
   }, [username]);
 
   return (
-    <aside className="w-1/4 border-r relative min-h-screen bg-[#E6F0FA] overflow-hidden">
-<h2 className="p-4 text-xl font-semibold flex items-center">
-  <span>Friends</span>
-
-  <motion.div
-    initial={{ opacity: 0, x: 10 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ duration: 0.5 }}
-    className="ml-auto"
-  >
-    <Link href="/" className="flex items-center">
-      <div className="w-20 h-20 relative"> {/* fixed logo box */}
-        <Image
-          src="/DuoVoice_Logo_DeafBlue_Transparent.png"
-          alt="DuoVoice Logo"
-          fill
-          className="object-contain"
-          priority
-        />
+    <aside className="w-72 border-r relative min-h-screen bg-[#F4F6FA] flex flex-col">
+      <div className="p-4 flex justify-between items-center border-b">
+        <h2 className="text-xl font-semibold">Friends</h2>
+        <motion.div
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Link href="/homepage" className="flex items-center">
+            <div className="w-20 h-20 relative">
+              <Image
+                src="/DuoVoice_Logo_DeafBlue_Transparent.png"
+                alt="DuoVoice Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </Link>
+        </motion.div>
       </div>
-    </Link>
-  </motion.div>
-</h2>
 
-         
-      
-      <ul>
+      <ul className="flex-1 overflow-y-auto">
         {friends.map((f) => (
           <li key={f.uid}>
             <button
               onClick={() => onSelect(f)}
-              className={`w-full text-left p-4 hover:bg-gray-100 ${
-                f.uid === selectedFriendId ? "bg-gray-200" : ""
+              className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition ${
+                f.uid === selectedFriendId ? "bg-blue-100" : ""
               }`}
             >
-              {f.name}
+              <div className="w-8 h-8 rounded-full bg-blue-300 flex items-center justify-center text-white font-bold uppercase">
+                {f.name[0]}
+              </div>
+              <span className="text-gray-700">{f.name}</span>
             </button>
           </li>
         ))}

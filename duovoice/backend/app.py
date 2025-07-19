@@ -2,6 +2,9 @@ import os
 import uuid
 import json
 import firebase_admin
+import numpy as np
+from pathlib import Path
+import tensorflow as tf
 from firebase_admin import credentials, firestore, initialize_app
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
@@ -43,6 +46,47 @@ app.add_middleware(
     allow_headers=["*"],
     allow_methods=["*"]
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+MODEL_PATH = Path(
+    os.getenv("ASL_H5_PATH", PROJECT_ROOT / "public" / "model" / "asl_alphabet_mlp.h5")
+)
+
+try:
+    h5_model = tf.keras.models.load_model(MODEL_PATH)
+except Exception as e:
+    raise RuntimeError(f"Failed to load ASL model at {MODEL_PATH}: {e}")
+
+# Same labels as front-end
+LABELS = [
+  'A','B','C','D','E','F','G','H','I',
+  'K','L','M','N','O','P','Q','R','S',
+  'T','U','V','W','X','Y',
+  'del','space'
+]
+
+class PredictPayload(BaseModel):
+    landmarks: list[list[float]]  # shape: (21, 2)
+
+@app.post("/predict")
+def predict_asl(payload: PredictPayload):
+    lm = np.array(payload.landmarks, dtype=np.float32)  # (21,2)
+    # 1) center on wrist
+    lm -= lm[0]
+    # 2) scale to unit size
+    dists = np.linalg.norm(lm, axis=1)
+    max_dist = float(np.max(dists)) if np.any(dists) else 1.0
+    lm /= max_dist
+    # 3) flatten and predict
+    flat = lm.flatten()[None, :]
+    preds = h5_model.predict(flat)  # (1, 28)
+    idx = int(np.argmax(preds, axis=1)[0])
+    try:
+        letter = LABELS[idx]
+    except IndexError:
+        raise HTTPException(500, detail="Model output index out of range")
+    return {"letter": letter}
 
 @app.on_event("startup")
 def clear_queues():
