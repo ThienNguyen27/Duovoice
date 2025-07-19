@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Hand, Ear, Users, BookOpen, MessageCircle, Info } from 'lucide-react';
-
+import MatchButton from '../components/MatchButton';
 export default function Homepage() {
   const router = useRouter();
   const [username, setUsername] = useState<string | null>(null);
@@ -38,10 +38,7 @@ export default function Homepage() {
         </h1>
         <hr className="border-t-2 border-blue-200 my-4" />
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/match" className="inline-flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
-            <Users className="w-5 h-5" />
-            Match
-          </Link>
+          <MatchButton userId={username} />
           <Link href="/practice" className="inline-flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
             <BookOpen className="w-5 h-5" />
             Practice

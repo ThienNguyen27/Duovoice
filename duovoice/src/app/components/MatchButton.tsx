@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Users } from 'lucide-react';
 
 type Props = { userId: string };
 
@@ -56,12 +57,16 @@ export default function MatchButton({ userId }: Props) {
   };
 
   return (
-    <button
+     <button
       onClick={startMatch}
-      className={`w-full py-4 rounded text-white ${
-        waiting ? 'bg-gray-800 animate-pulse' : 'bg-green-600 hover:bg-green-700'
+      disabled={waiting}
+      className={`inline-flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-white transition whitespace-nowrap ${
+        waiting
+          ? 'bg-gray-800 animate-pulse'
+          : 'bg-blue-600 hover:bg-blue-700'
       }`}
     >
+      <Users className="w-5 h-5" />
       {waiting ? 'Matching…' : 'Match now'}
     </button>
   );

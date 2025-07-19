@@ -37,54 +37,60 @@ export default function VideoCall({
     });
     pcRef.current = pc;
 
-    // **Use the exact WS URL your backend listens on**
     const ws = new WebSocket(`ws://localhost:8000/call/${roomId}`);
     wsRef.current = ws;
+    let wsOpen = false;
+
+    // helper: only send once socket is open
+    const sendSignal = (msg: any) => {
+      const json = JSON.stringify(msg);
+      if (wsOpen) {
+        ws.send(json);
+      } else {
+        ws.addEventListener(
+          'open',
+          () => {
+            ws.send(json);
+          },
+          { once: true }
+        );
+      }
+    };
 
     ws.onopen = () => {
+      wsOpen = true;
       console.log('WS open – joining room', roomId);
-      ws.send(JSON.stringify({ type: 'join', sender: userId }));
+      sendSignal({ type: 'join', sender: userId });
     };
 
     ws.onmessage = async ({ data }) => {
       const msg = JSON.parse(data) as SignalingMessage;
       if (msg.sender === userId || pc.signalingState === 'closed') return;
 
-      console.log('⟵ WS message', msg);
+      console.log('⟵ WS message', msg);
       switch (msg.type) {
-        case 'offer':
+        case 'offer': {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
-          {
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            ws.send(
-              JSON.stringify({
-                type: 'answer',
-                data: answer,
-                sender: userId,
-              })
-            );
-          }
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          sendSignal({ type: 'answer', data: answer, sender: userId });
           break;
-
-        case 'answer':
+        }
+        case 'answer': {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
           break;
-
-        case 'candidate':
+        }
+        case 'candidate': {
           await pc.addIceCandidate(new RTCIceCandidate(msg.data));
           break;
-
+        }
         case 'friend-request':
-          console.log('🔔 incoming friend request from', msg.sender);
           setIncomingRequest(true);
           break;
-
         case 'friend-accept':
           setIsFriend(true);
           alert(`${peerId} accepted your friend request!`);
           break;
-
         case 'friend-decline':
           setRequestSent(false);
           alert(`${peerId} declined your friend request.`);
@@ -92,40 +98,24 @@ export default function VideoCall({
       }
     };
 
-    // ICE candidates
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        ws.send(
-          JSON.stringify({
-            type: 'candidate',
-            data: candidate,
-            sender: userId,
-          })
-        );
+        sendSignal({ type: 'candidate', data: candidate, sender: userId });
       }
     };
 
-    // Remote tracks
     pc.ontrack = (evt) => {
       if (remoteRef.current) {
         remoteRef.current.srcObject = evt.streams[0];
       }
     };
 
-    // Negotiation
     pc.onnegotiationneeded = async () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      ws.send(
-        JSON.stringify({
-          type: 'offer',
-          data: offer,
-          sender: userId,
-        })
-      );
+      sendSignal({ type: 'offer', data: offer, sender: userId });
     };
 
-    // Grab local media
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
@@ -147,33 +137,28 @@ export default function VideoCall({
   }, [roomId, userId, peerId]);
 
   const handleAddFriend = () => {
-    wsRef.current?.send(
-      JSON.stringify({ type: 'friend-request', sender: userId })
-    );
+    wsRef.current &&
+      wsRef.current.readyState === WebSocket.OPEN &&
+      wsRef.current.send(JSON.stringify({ type: 'friend-request', sender: userId }));
     setRequestSent(true);
   };
 
   const handleAccept = async () => {
     try {
       const inv = {
-      id: crypto.randomUUID(),
-      requester_id: peerId,
-      receiver_id: userId,
-      status: "Accept",                 
-      time_stamp: new Date().toISOString()
-    };
-      const res = await fetch(
-        `http://localhost:8000/users/${peerId}/friends`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(inv),
-        }
-      );
+        id: crypto.randomUUID(),
+        requester_id: peerId,
+        receiver_id: userId,
+        status: 'Accept',
+        time_stamp: new Date().toISOString(),
+      };
+      const res = await fetch(`http://localhost:8000/users/${peerId}/friends`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inv),
+      });
       if (!res.ok) throw new Error('Failed to add friend');
-      wsRef.current?.send(
-        JSON.stringify({ type: 'friend-accept', sender: userId })
-      );
+      wsRef.current?.send(JSON.stringify({ type: 'friend-accept', sender: userId }));
       setIsFriend(true);
     } catch (e: any) {
       console.error('handleAccept error:', e);
@@ -184,9 +169,7 @@ export default function VideoCall({
   };
 
   const handleDecline = () => {
-    wsRef.current?.send(
-      JSON.stringify({ type: 'friend-decline', sender: userId })
-    );
+    wsRef.current?.send(JSON.stringify({ type: 'friend-decline', sender: userId }));
     setIncomingRequest(false);
   };
 
@@ -195,19 +178,15 @@ export default function VideoCall({
       {incomingRequest && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <p className="mb-4 text-center">
-              {peerId} wants to be your friend.
-            </p>
+            <p className="mb-4 text-center">{peerId} wants to be your friend.</p>
             <div className="flex justify-center space-x-4">
               <button
-                type="button"
                 onClick={handleAccept}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
               >
                 Accept
               </button>
               <button
-                type="button"
                 onClick={handleDecline}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
@@ -223,25 +202,13 @@ export default function VideoCall({
       </h2>
 
       <div className="flex gap-4">
-        <video
-          ref={localRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-64 h-48 bg-black"
-        />
-        <video
-          ref={remoteRef}
-          autoPlay
-          playsInline
-          className="w-64 h-48 bg-black"
-        />
+        <video ref={localRef} autoPlay muted playsInline className="w-64 h-48 bg-black" />
+        <video ref={remoteRef} autoPlay playsInline className="w-64 h-48 bg-black" />
       </div>
 
       <div className="flex space-x-4">
         {!isFriend && (
           <button
-            type="button"
             onClick={handleAddFriend}
             disabled={requestSent}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
@@ -250,7 +217,6 @@ export default function VideoCall({
           </button>
         )}
         <button
-          type="button"
           onClick={() => router.push('/homepage')}
           className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
         >
