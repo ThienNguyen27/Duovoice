@@ -1,8 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useSearchParams } from 'next/navigation';
-import VideoCall from '@/app/components/VideoCall';
+
+const VideoCall = dynamic(
+  () => import('@/app/components/VideoCall'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center min-h-screen">
+        Loading call…
+      </div>
+    ),
+  }
+);
 
 export default function CallPage() {
   const { roomId: rawRoom } = useParams();
@@ -10,20 +21,14 @@ export default function CallPage() {
   const search = useSearchParams();
   const userId = search.get('userId') ?? '';
   const peerId = search.get('peerId') ?? '';
-  // const initiator = search.get('initiator') === 'true';
 
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    setReady(true);
-  }, []);
+  if (!roomId || !userId || !peerId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Missing parameters…
+      </div>
+    );
+  }
 
-  if (!ready || !roomId || !userId || !peerId) return null;
-
-  return (
-    <VideoCall
-      roomId={roomId}
-      userId={userId}
-      peerId={peerId}
-    />
-  );
+  return <VideoCall roomId={roomId} userId={userId} peerId={peerId} />;
 }

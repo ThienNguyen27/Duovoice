@@ -35,15 +35,19 @@ class DirectMessage(BaseModel):
     content: str
     time_stamp: datetime
 
+class FriendInvitationCreate(BaseModel):
+    requester_id: str
+    receiver_id: str
+
 class FriendInvitation(BaseModel):
     id: str
     requester_id: str
     receiver_id: str
-    status: Literal["Pending", "Accept", "Decline"]
+    status: Literal["Accept", "Decline"]
     time_stamp: datetime
 
 class Friend(BaseModel):
     id: str
     user_id: str
     friend_id: str
-    status: Literal["Online", "Offline"]
+

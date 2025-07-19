@@ -1,4 +1,6 @@
 import os
+import uuid
+import json
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
 from pydantic import BaseModel
@@ -8,7 +10,6 @@ from dotenv import load_dotenv
 from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation
 import bcrypt
 import redis
-import uuid
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
 load_dotenv(dotenv_path=env_path)
@@ -116,41 +117,58 @@ async def get_all_users():
     
     return users
 
-peers = {}
+peers: dict[str, list[WebSocket]] = {}
+user_map: dict[WebSocket, str] = {}
 @app.websocket("/call/{room_id}")
 async def call_websocket(websocket: WebSocket, room_id: str):
     await websocket.accept()
-    if room_id not in peers:
-        peers[room_id] = []
-    peers[room_id].append(websocket)
+
+    # 1) Stash this socket
+    peers.setdefault(room_id, []).append(websocket)
 
     try:
+        # 2) First message MUST be a join with your userId
+        join_raw = await websocket.receive_text()
+        join = json.loads(join_raw)
+        if join.get("type") != "join" or "sender" not in join:
+            await websocket.close()
+            return
+        user_map[websocket] = join["sender"]
+
+        # 3) Now forward ONLY to the *other* peer
         while True:
-            data = await websocket.receive_text()
-            for peer in peers[room_id]:
-                if peer != websocket:
-                    await peer.send_text(data)
+            raw = await websocket.receive_text()
+            for peer_ws in list(peers[room_id]):
+                if peer_ws is not websocket:
+                    await peer_ws.send_text(raw)
+
     except WebSocketDisconnect:
+        pass
+    finally:
+        # 4) Clean up
         peers[room_id].remove(websocket)
+        user_map.pop(websocket, None)
+        if not peers[room_id]:
+            peers.pop(room_id, None)
 
+@app.post("/users/{username}/friends",response_model=FriendInvitation,status_code=201)
+async def add_friend(username: str, inv: FriendInvitation):
+    # 1) ensure the path‐param matches the payload
+    if inv.requester_id != username:
+        raise HTTPException(400, "Mismatched requester")
 
+    # 2) verify both users exist
+    me_ref   = db.collection("users").document(inv.requester_id)
+    them_ref = db.collection("users").document(inv.receiver_id)
+    if not me_ref.get().exists or not them_ref.get().exists:
+        raise HTTPException(404, "User not found")
 
+    # 3) write the full invitation doc under each user
+    me_ref.collection("friends").document(inv.receiver_id).set(inv.dict())
+    them_ref.collection("friends").document(inv.requester_id).set(inv.dict())
 
-# Add a friend under users/{user_uid}/friends
-@app.post("/users/{user_uid}/friends", status_code=201)
-async def add_friend(user_uid: str, inv: FriendInvitation):
-    # Ensure the path param matches the invitation’s requester
-    if inv.requester_id != user_uid:
-        raise HTTPException(400, detail="Mismatched requester")
-    user_ref = db.collection("users").document(user_uid)
-    if not user_ref.get().exists:
-        raise HTTPException(404, detail="User not found")
-    # Use receiver_id as the friend’s UID (and store that as the name if you like)
-    user_ref.collection("friends").document(inv.receiver_id).set({
-        "name": inv.receiver_id,
-        "since": firestore.SERVER_TIMESTAMP
-    })
-    return {"detail": f"Friend {inv.receiver_id} added."}
+    # 4) return exactly what the client sent
+    return inv
 
 
 # List friends under users/{user_uid}/friends
