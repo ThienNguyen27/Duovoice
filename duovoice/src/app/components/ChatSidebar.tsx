@@ -1,51 +1,42 @@
-"use client";
+// components/ChatSidebar.tsx
+'use client';
 
-import { useEffect, useState } from "react";
-import { getFriends, Friend } from "../../../public/lib/api";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import Image from "next/image";
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+
+export interface Friend {
+  uid: string;         // document ID
+  name: string;        // friend's username
+  since: string | null;// optional ISO timestamp
+}
 
 interface ChatSidebarProps {
   username: string;
-  onSelect: (friend: Friend) => void;
+  friends: Friend[];
   selectedFriendId?: string;
+  onSelect: (friend: Friend) => void;
 }
 
 export default function ChatSidebar({
   username,
-  onSelect,
+  friends,
   selectedFriendId,
+  onSelect,
 }: ChatSidebarProps) {
-  const [friends, setFriends] = useState<Friend[]>([]);
-
-  useEffect(() => {
-    if (username) {
-      getFriends(username).then(setFriends).catch(console.error);
-    }
-  }, [username]);
-
   return (
-    <aside className="w-72 border-r relative min-h-screen bg-[#F4F6FA] flex flex-col">
+    <aside className="w-72 border-r bg-[#F4F6FA] flex flex-col min-h-screen">
       <div className="p-4 flex justify-between items-center border-b">
         <h2 className="text-xl font-semibold">Friends</h2>
-        <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Link href="/homepage" className="flex items-center">
-            <div className="w-20 h-20 relative">
-              <Image
-                src="/DuoVoice_Logo_DeafBlue_Transparent.png"
-                alt="DuoVoice Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-          </Link>
-        </motion.div>
+        <Link href="/homepage" className="w-10 h-10 relative">
+          <Image
+            src="/DuoVoice_Logo_DeafBlue_Transparent.png"
+            alt="DuoVoice Logo"
+            fill
+            className="object-contain"
+            priority
+          />
+        </Link>
       </div>
 
       <ul className="flex-1 overflow-y-auto">
@@ -54,13 +45,20 @@ export default function ChatSidebar({
             <button
               onClick={() => onSelect(f)}
               className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition ${
-                f.uid === selectedFriendId ? "bg-blue-100" : ""
+                f.uid === selectedFriendId ? 'bg-blue-100' : ''
               }`}
             >
               <div className="w-8 h-8 rounded-full bg-blue-300 flex items-center justify-center text-white font-bold uppercase">
-                {f.name[0]}
+                {f.name.charAt(0)}
               </div>
-              <span className="text-gray-700">{f.name}</span>
+              <div className="flex-1 text-left">
+                <div className="text-gray-800">{f.name}</div>
+                {f.since && (
+                  <div className="text-xs text-gray-500">
+                    since {new Date(f.since).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
             </button>
           </li>
         ))}

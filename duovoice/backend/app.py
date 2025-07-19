@@ -10,9 +10,10 @@ from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation
+from schemas import UserLogin, UserInDB, UserSignUp, FriendInvitation, Friend
 import bcrypt
 import redis
+from typing import List
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "lib", ".env")
 load_dotenv(dotenv_path=env_path)
@@ -216,21 +217,20 @@ async def add_friend(username: str, inv: FriendInvitation):
 
 
 # List friends under users/{user_uid}/friends
-@app.get("/users/{user_uid}/friends")
+@app.get("/users/{user_uid}/friends",response_model=List[Friend])
 async def list_friends(user_uid: str):
     user_ref = db.collection("users").document(user_uid)
     if not user_ref.get().exists:
         raise HTTPException(404, detail="User not found")
-    docs = user_ref.collection("friends").stream()
-    friends = []
-    for doc in docs:
-        d = doc.to_dict()
-        ts = d.get("since")
-        friends.append({
-            "uid": doc.id,
-            "name": d.get("name"),
-            "since": ts.isoformat() if hasattr(ts, "isoformat") else None
-        })
+
+    friends: List[Friend] = []
+    for doc in user_ref.collection("friends").stream():
+        # doc.id is the friend’s user ID
+        friends.append(Friend(
+            id=doc.id,
+            user_id=user_uid,
+            friend_id=doc.id
+        ))
     return friends
 
 # matching normal with muted person currently take in a json
