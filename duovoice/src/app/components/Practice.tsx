@@ -88,64 +88,75 @@ export default function Practice() {
   // Inference loop with smoothing & backend predict
   useEffect(() => {
     let id: number;
-    if (detector && webcamRef.current && canvasRef.current) {
-      id = window.setInterval(async () => {
-        const video = webcamRef.current!.video;
-        const canvas = canvasRef.current!;
-        const ctx = canvas.getContext('2d')!;
-        if (!video || video.readyState !== 4) return;
+  if (detector && webcamRef.current && canvasRef.current) {
+    id = window.setInterval(async () => {
+      const video = webcamRef.current!.video;
+      const canvas = canvasRef.current!;
+      const ctx = canvas.getContext('2d')!;
+      if (!video || video.readyState !== 4) return;
 
-        const hands = await detector.estimateHands(video, true);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const hands = await detector.estimateHands(video, true);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (hands.length === 0) {
-          if (sawHandRef.current) {
-            setPrediction('No hand');
-            sawHandRef.current = false;
-          }
-          return;
+      if (hands.length === 0) {
+        // only update once when going from hand→no‐hand
+        if (sawHandRef.current) {
+          setPrediction('No hand detected');
+          sawHandRef.current = false;
         }
-        sawHandRef.current = true;
+        return;
+      }
+      sawHandRef.current = true;
 
-        // draw landmarks
-        const lm3d = hands[0].landmarks as [number, number, number][];
-        lm3d.forEach(([x,y]) => {
-          ctx.beginPath(); ctx.arc(x,y,5,0,2*Math.PI); ctx.fillStyle='white'; ctx.fill();
+      // draw landmarks
+      const lm3d = hands[0].landmarks as [number, number, number][];
+      lm3d.forEach(([x, y]) => {
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+      });
+
+      // optional visual feedback box
+      const score = Math.floor(Math.random() * 100);
+      setMatchScore(score);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = score >= 85 ? 'green' : score >= 60 ? 'orange' : 'red';
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+      // send to backend
+      let letter = '', conf = 0;
+      try {
+        const res = await fetch('http://localhost:8000/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ landmarks: lm3d }),
         });
+        const data = await res.json();
+        letter = data.letter;
+        conf = data.confidence;
+      } catch (e) {
+        console.error('Predict error', e);
+        return;
+      }
 
-        // optional score
-        const score = Math.floor(Math.random()*100);
-        setMatchScore(score);
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = score>=85?'green':score>=60?'orange':'red';
-        ctx.strokeRect(0,0,canvas.width,canvas.height);
-
-        // send landmarks to backend
-        let letter = '', conf = 0;
-        try {
-          const res = await fetch('http://localhost:8000/predict', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ landmarks: lm3d })
-          });
-          const data = await res.json();
-          letter = data.letter;
-          conf   = data.confidence;
-        } catch(e) { console.error(e); return; }
-
-        // smooth & threshold
-        if (conf > CONF_THRESH) {
-          histRef.current.push(letter);
-          if (histRef.current.length > HISTORY_LEN) histRef.current.shift();
-          const counts = histRef.current.reduce((a,l)=>{a[l]=(a[l]||0)+1;return a;},{} as Record<string,number>);
-          const [best, cnt] = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
-          if (cnt >= MAJORITY) setPrediction(best);
-        } else {
-          histRef.current = [];
-        }
-      }, 200);
-    }
-    return () => clearInterval(id);
-  }, [detector]);
+      // smoothing & threshold
+      if (conf > CONF_THRESH) {
+        histRef.current.push(letter);
+        if (histRef.current.length > HISTORY_LEN) histRef.current.shift();
+        const counts = histRef.current.reduce((acc, l) => {
+          acc[l] = (acc[l] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        const [best, cnt] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+        if (cnt >= MAJORITY) setPrediction(best);
+      } else {
+        histRef.current = [];
+      }
+    }, 200);
+  }
+  return () => clearInterval(id);
+}, [detector]);
 
   // Keyboard for phrase mode
   const suggestions = useMemo(() => {

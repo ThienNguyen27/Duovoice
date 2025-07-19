@@ -96,7 +96,7 @@ def predict_asl(payload: PredictPayload):
         letter = LABELS[idx]
     except IndexError:
         raise HTTPException(500, detail="Model output index out of range")
-    return {"letter": letter}
+    return {"letter": letter,  "confidence": float(np.max(preds))}
 
 @app.on_event("startup")
 def clear_queues():

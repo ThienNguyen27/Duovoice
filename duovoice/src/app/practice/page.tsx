@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
+
 // keep SSR off so model code only runs in the browser
 const Practice = dynamic(() => import('../components/Practice'), {
   ssr: false,
