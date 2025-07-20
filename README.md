@@ -1,3 +1,7 @@
+## Demo
+
+Watch the full demo on YouTube: [https://youtu.be/Luqynmfmssk](https://youtu.be/Luqynmfmssk)
+
 🤝 DuoVoice
 Real-Time Video Translation & Sign Language Communication Platform
 🚀 Why We Chose the DuoVoice Idea
